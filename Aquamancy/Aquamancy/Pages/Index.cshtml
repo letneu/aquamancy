@@ -1,0 +1,188 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Aquamancy";
+}
+<div class="row align-items-center mb-3">
+    <div class="col-4">
+        <div id="time" class="text-start" style="font-size:10rem;">
+        </div>
+        <div class="text-center" style="font-size:3rem;">
+            @DateTime.Now.ToString("dddd, dd MMMM yyyy")
+        </div>
+    </div>
+    <div class="col-8">
+        <div class="card-body" style="width: 1200px">
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+</div>
+<div class="row">
+    @foreach (var tableInfo in Model.TableInformations)
+    {
+        var cardStyle = tableInfo.TemperatureReading == null || tableInfo.TemperatureReading.Temperature < tableInfo.Probe.MinTemperature ||
+                        tableInfo.TemperatureReading.Temperature > tableInfo.Probe.MaxTemperature
+            ? "text-bg-warning-custom"
+            : "text-bg-light";
+
+        <div class="col-auto">
+            <div class="card mb-3 text-center" style="max-width: 60rem; font-size: 3rem;">
+                <div class="card-header" style="background-color:@(tableInfo.Probe.Color);">
+                    @tableInfo.Probe.Name.ToUpper()
+                </div>
+                <div class="card-body @(cardStyle) text-center">
+                    <h5 style="font-size: 5rem;" class="card-text fw-bold">@(tableInfo.TemperatureReading != null ? tableInfo.TemperatureReading.Temperature.ToString("F1") + "°C" : "N/A")
+                        @if (tableInfo.TemperatureReading != null)
+                        {
+                            if (tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
+                            {
+                                if (tableInfo.Tendency > 0)
+                                {
+                                    <span class="text-center" style="font-size:2rem;color:red">+@tableInfo.Tendency.ToString("F1")°C</span>
+                                    <i class="bi bi-arrow-up-right" style="font-size:3rem;color:red"></i>
+                                }
+                                else if (tableInfo.Tendency < 0)
+                                {
+                                    <span class="text-center" style="font-size:2rem;color:dodgerblue">@tableInfo.Tendency.ToString("F1")°C</span>
+                                    <i class="bi bi-arrow-down-right" style="font-size:3rem;color:dodgerblue"></i>
+                                }
+                            }
+                            else
+                            {
+                                <span style="margin-left:1rem;font-size:3rem"></span>
+                            }
+                        }
+                    </h5>
+                    <p style="font-size: 2rem;" class="card-text mb-0">Min: @(tableInfo.Probe.MinTemperature + "°C")</p>
+                    <p style="font-size: 2rem;" class="card-text">Max: @($"{tableInfo.Probe.MaxTemperature}°C")</p>
+                    <p style="font-size: 1rem;"  class="card-text m-0">Freq : @tableInfo.Probe.SendFrequencyInSeconds sec</p>
+
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+
+@section Scripts {
+    <script src="~/lib/chart.js/dist/chart.umd.js"></script>
+    <script src="~/lib/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Clock: display current time in HH:mm format and update every second
+            function updateClock() {
+                var el = document.getElementById('time');
+                if (!el) return;
+                var now = new Date();
+                var hh = String(now.getHours()).padStart(2, '0');
+                var mm = String(now.getMinutes()).padStart(2, '0');
+                el.textContent = hh + ':' + mm;
+            }
+
+            updateClock();
+            // Update every second to keep minutes accurate
+            setInterval(updateClock, 1000);
+
+            var canvas = document.getElementById('lineChart');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+
+            var data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Chart));
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            text: 'Aquamancy',
+                            display: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid : {
+                                color : '#e6e6e6'
+                            },
+                            type: 'time',
+                            time: {
+                              // date-fns format tokens: keep tooltip with minutes, labels show hour + 'h'
+                              tooltipFormat: 'HH:mm',
+                              unit: 'hour',
+                              displayFormats: {
+                                  hour: "HH'h'"
+                              }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            grid : {
+                                color : '#e6e6e6'
+                            },
+                            // Explicit y-axis range
+                            min: 20,
+                            max: 35,
+                            title: {
+                                display: true,
+                                text: 'Temperature'
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Increase all chart text sizes to be twice the default size.
+            // Determine base font size from Chart defaults (fallback to 12 if not set).
+            const baseFontSize = (Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.size) ? Chart.defaults.font.size : 12;
+            const doubleSize = baseFontSize * @(Model._fontSizeMultiplier);
+
+            // Set chart-level default font size
+            config.options.font = { size: doubleSize };
+
+            // Ensure title font is doubled
+            config.options.plugins = config.options.plugins || {};
+            config.options.plugins.title = config.options.plugins.title || {};
+            config.options.plugins.title.font = { size: doubleSize };
+
+            // Legend labels
+            config.options.plugins.legend = config.options.plugins.legend || {};
+            config.options.plugins.legend.display = false;
+            config.options.plugins.legend.labels = config.options.plugins.legend.labels || {};
+            config.options.plugins.legend.labels.font = { size: doubleSize };
+
+            // Tooltip fonts
+            config.options.plugins.tooltip = config.options.plugins.tooltip || {};
+            config.options.plugins.tooltip.titleFont = { size: doubleSize };
+            config.options.plugins.tooltip.bodyFont = { size: doubleSize };
+
+            // Disable animations
+            config.options.animation = false;
+            // Also clear transitions to avoid animated transitions (Chart.js v3/v4)
+            config.options.transitions = {};
+
+            // Scales: ticks and title fonts
+            if (config.options.scales) {
+                Object.keys(config.options.scales).forEach(function (scaleKey) {
+                    var scale = config.options.scales[scaleKey] || {};
+                    scale.ticks = scale.ticks || {};
+                    scale.ticks.font = { size: doubleSize };
+
+                    scale.title = scale.title || {};
+                    scale.title.font = { size: doubleSize };
+
+                    config.options.scales[scaleKey] = scale;
+                });
+            }
+
+            new Chart(ctx, config);
+
+            // Refresh the page
+            setInterval(function () { location.reload(); }, @(Model._pageRefreshIntervalInMiliSeconds));
+        });
+    </script>
+}
