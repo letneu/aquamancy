@@ -20,9 +20,11 @@ builder.Services.AddSingleton<IDbConnectionFactory>(new MariaDbConnectionFactory
 builder.Services.AddScoped<IProbeRepository, ProbeRepository>();
 builder.Services.AddScoped<ITemperatureRepository, TemperatureRepository>();
 
-// Register discord notifier and hosted service
 builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IDiscordNotifierLogic, DiscordNotifierLogic>();
+
+builder.Services.AddScoped<IDiscordNotifierLogic, DiscordNotifierLogic>();
+builder.Services.AddScoped<ITemperatureReadingLogic, TemperatureReadingLogic>();
+
 builder.Services.AddHostedService<DiscordNotifierService>();
 builder.Services.AddHostedService<DeadManSwitchService>();
 

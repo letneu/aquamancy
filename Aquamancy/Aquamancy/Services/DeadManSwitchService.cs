@@ -5,18 +5,20 @@ namespace Aquamancy.Services
     public class DeadManSwitchService : BackgroundService
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IDiscordNotifierLogic _discordNotifier;
+        private IServiceScopeFactory _scopeFactory;
+        private ILogger<DeadManSwitchService> _logger;
         private readonly string _healthCheckUrl;
         private bool _deadManSwitchEnabled;
         bool _isAlert;
         private static string errorMessage = "@everyone **ALERTE CRITIQUE** -> Impossible de joindre le service externe sur le cloud Azure lors du contrôle de santé, il ne sera pas possible d'être prévenu en cas de perte de courant/réseau ! Vérifiez l'état de santé de AquamancyHealthCheck sur le cloud Azure.";
 
-        public DeadManSwitchService(IHttpClientFactory httpClientFactory, IDiscordNotifierLogic discordNotifier, IConfiguration configuration)
+        public DeadManSwitchService(IHttpClientFactory httpClientFactory, IConfiguration configuration, IServiceScopeFactory scopeFactory, ILogger<DeadManSwitchService> logger)
         {
+            _logger = logger;
             _httpClientFactory = httpClientFactory;
-            _discordNotifier = discordNotifier;
             _healthCheckUrl = configuration["DeadManSwitch:HealthCheckUrl"];
             _deadManSwitchEnabled = configuration.GetValue<bool>("DeadManSwitch:DeadManSwitchEnabled");
+            _scopeFactory = scopeFactory;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -33,17 +35,19 @@ namespace Aquamancy.Services
 
                 try
                 {
+                    using var scope = _scopeFactory.CreateScope();
+                    var discordNotifierLogic = scope.ServiceProvider.GetRequiredService<IDiscordNotifierLogic>();
                     var httpClient = _httpClientFactory.CreateClient();
                     using var response = await httpClient.GetAsync(_healthCheckUrl, stoppingToken);
 
                     if (!response.IsSuccessStatusCode)
                     {
-                        await HandleError();
+                        await HandleError(discordNotifierLogic);
                     }
 
                     if(_isAlert)
                     {
-                        await _discordNotifier.SendDiscordMessageAsync("Fin de l'alerte, le service externe sur le cloud Azure est de nouveau joignable");
+                        await discordNotifierLogic.SendDiscordMessageAsync("Fin de l'alerte, le service externe sur le cloud Azure est de nouveau joignable");
                         _isAlert = false;
                     }
 
@@ -60,12 +64,17 @@ namespace Aquamancy.Services
             }
         }
 
-        private async Task HandleError()
+        private async Task HandleError(IDiscordNotifierLogic? discordNotifierLogic = null)
         {
             if (!_isAlert)
             {
                 _isAlert = true;
-                await _discordNotifier.SendDiscordMessageAsync(errorMessage);
+                if(discordNotifierLogic != null)
+                {
+                    await discordNotifierLogic.SendDiscordMessageAsync(errorMessage);
+                }
+
+                _logger.LogError(errorMessage);
             }
         }
     }
