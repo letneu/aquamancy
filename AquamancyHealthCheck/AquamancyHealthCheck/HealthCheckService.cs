@@ -33,8 +33,7 @@ namespace AquamancyHealthCheck
                     {
                         var httpClient = _httpClientFactory.CreateClient();
                         _isAlert = true;
-                        await SendDiscordMessage($"@everyone **ALERTE CRITIQUE** ->  Le serveur local aquamancy n'a pas envoyé de signe de vie (ping) au cloud Azure depuis plus de {_checkFrequency}, perte de courant/réseau détéctée ! Vérifiez l'état du raspberry pi", httpClient);
-                        await Task.Delay(TimeSpan.FromHours(2), stoppingToken);
+                        await SendDiscordMessage($"@everyone **ALERTE CRITIQUE** ->  Le serveur local aquamancy n'a pas envoyé de signe de vie (ping) au cloud Azure depuis plus de {_checkFrequency} min, perte de courant/réseau détéctée ! Vérifiez l'état du raspberry pi", httpClient);
                     }
                 }
                 else if (_isAlert)
@@ -44,7 +43,7 @@ namespace AquamancyHealthCheck
                     await SendDiscordMessage($"@everyone Fin de l'alerte, la connexion a été rétablie", httpClient);
                 }
                 
-                await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
 

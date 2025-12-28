@@ -40,7 +40,14 @@ namespace Aquamancy.Logic
             );
 
             var client = _httpClientFactory.CreateClient();
-            await client.PostAsync(_webhookUrl, json);
+            var result = await client.PostAsync(_webhookUrl, json);
+
+            if(!result.IsSuccessStatusCode)
+            {
+                var reason = result.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to send Discord message. Status code: {StatusCode} with reason : {Reason}", result.StatusCode, reason);
+            }
+            
         }
     }
 }

@@ -34,15 +34,23 @@ namespace Aquamancy.Services
                     {
                         var latestTemp = (await tempRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-1))).FirstOrDefault();
 
-                        if (latestTemp != null && (latestTemp.Temperature < probe.MinTemperature || latestTemp.Temperature > probe.MaxTemperature))
+                        if (latestTemp == null || (latestTemp.Temperature < probe.MinTemperature || latestTemp.Temperature > probe.MaxTemperature))
                         {
                             // Only notify once per [_alertFrequencyInHours] per probe
                             var canNotify = !probe.LastNotifiedAt.HasValue || probe.LastNotifiedAt.Value < DateTime.Now.AddHours(-_alertFrequencyInHours);
 
                             if (canNotify)
                             {
-                                await discordNotifier.SendDiscordMessageAsync($"@everyone ALERTE -> La sonde {probe.Name} a remonté une temperature trop {(latestTemp.Temperature < probe.MinTemperature ? "froide" : "chaude")}" +
-                                    $" : {latestTemp.Temperature} C° (seuil entre {probe.MinTemperature} et {probe.MaxTemperature})");
+                                if(latestTemp != null)
+                                {
+                                    await discordNotifier.SendDiscordMessageAsync($"@everyone ALERTE -> La sonde {probe.Name} a remonté une temperature trop {(latestTemp.Temperature < probe.MinTemperature ? "froide" : "chaude")}" +
+                                        $" : {latestTemp.Temperature} C° (seuil entre {probe.MinTemperature} et {probe.MaxTemperature})");
+                                }
+                                else
+                                {
+                                    await discordNotifier.SendDiscordMessageAsync($"@everyone ALERTE -> La sonde {probe.Name} ne remonte plus de temperature depuis un certain temps, vérifiez les branchement de la sonde, la led ne doit pas clignoter");
+                                }
+                                    
 
                                 await probeRepo.UpdateLastNotifiedAsync(probe.Id, DateTime.Now);
                             }
