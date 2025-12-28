@@ -22,6 +22,7 @@ namespace Aquamancy.Logic
         {
             if(!_notificationEnabled || string.IsNullOrEmpty(_webhookUrl))
             {
+                _logger.LogWarning("Can't send Discord message because notifications are disabled in the app settings or the web hook url is empty");
                 return;
             }
 

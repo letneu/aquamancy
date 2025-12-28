@@ -25,6 +25,7 @@ namespace Aquamancy.Services
         {
             if (!_deadManSwitchEnabled)
             {
+                _logger.LogWarning("Disabling DeadManSwitchService based on the appsettings parameter");
                 return;
             }
 
