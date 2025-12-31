@@ -10,7 +10,7 @@ namespace Aquamancy.Services
         private readonly string _healthCheckUrl;
         private bool _deadManSwitchEnabled;
         bool _isAlert;
-        private static string errorMessage = "@everyone **ALERTE CRITIQUE** -> Impossible de joindre le service externe sur le cloud Azure lors du contrôle de santé, il ne sera pas possible d'être prévenu en cas de perte de courant/réseau ! Vérifiez l'état de santé de AquamancyHealthCheck sur le cloud Azure.";
+        private static string errorMessage = "@everyone **ALERTE CRITIQUE** -> Impossible de joindre le service externe sur le cloud Azure lors du contrôle de santé, il ne sera pas possible d'être prévenu en cas de perte de courant/réseau ! Vérifiez l'état de santé de AquamancyHealthCheck sur le cloud Azure. Vous pouvez désactiver cette alerte dans le fichier appsettings.";
 
         public DeadManSwitchService(IHttpClientFactory httpClientFactory, IConfiguration configuration, IServiceScopeFactory scopeFactory, ILogger<DeadManSwitchService> logger)
         {
