@@ -1,0 +1,6 @@
+@AquamancyHealthCheck_HostAddress = http://localhost:5231
+
+GET {{AquamancyHealthCheck_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,83 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem rgba(255,255,255,0.06), 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+  /* Darker, grayish background closer to dark mode */
+  background-color: #1f2426; /* très sombre gris - nuance de gris */
+  color: #e6e6e6; /* texte clair pour contraste */
+}
+
+/* Cards: remplacer le fond blanc par une nuance de gris plus claire que le fond de page */
+.card,
+.card .card-body:not(.text-bg-warning-custom),
+.card .card-footer,
+.card.bg-white {
+    background-color: #2b2f31 !important; /* gris clair relatif au fond sombre */
+    border-color: rgba(255,255,255,0.06);
+}
+
+/* Texte dans les cards : gris clair sauf pour les en-têtes */
+.card, .card * {
+  color: #e6e6e6;
+}
+
+.card-header {
+    color: #000; /* en-têtes restent distincts */
+    border-color: rgba(255,255,255,0.06);
+}
+
+.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+  color: var(--bs-secondary-color);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+.text-bg-warning-custom {
+    color: #000 !important;
+    background-color: RGBA(var(--bs-warning-rgb),1);
+    animation: blink 1000ms infinite;
+}
+
+@keyframes blink {
+    0%, 100% {
+        background-color: RGBA(var(--bs-warning-rgb),1);
+    }
+
+    50% {
+        background-color: #2b2f31;
+    }
+}
+
+/* Hide native scrollbars but keep scrolling functional */
+/* For Firefox */
+html, body {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* For Chrome, Edge, Safari */
+html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

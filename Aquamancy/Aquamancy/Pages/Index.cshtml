@@ -1,0 +1,236 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Aquamancy";
+    var hotColor = "#c85e5e";
+    var coldColor = "#a1ccf4";
+}
+<div class="row align-items-center mb-3 position-fixed top-0 start-0 w-100">
+    <div class="col-4">
+        <div id="time" class="text-start text-center" style="font-size:10rem;">
+        </div>
+        <div class="text-center" style="font-size:3rem;">
+            @System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(DateTime.Now.ToString("dddd dd MMMM yyyy"))
+        </div>
+        @if(Model.ErrorTriggerLogic.HasError)
+        {
+            <div class="alert alert-danger" role="alert">
+                <div class="accordion accordion-flush" id="accordion">
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-danger fw-bold" style="font-size: 2rem;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                <i class="bi bi-exclamation-triangle-fill me-5" style="font-size: 6rem;"></i>
+                                Il y a des erreurs, cliquez pour voir les détails
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordion">
+                            <div class="accordion-body">
+                                <div>
+                                    @Model.ErrorTriggerLogic.LastInfoMessage
+                                </div>
+                                <div>
+                                    @Model.ErrorTriggerLogic.LastException?.Message
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="col-8">
+        <div class="card-body  mb-8" style="position: relative;height: 65vh;width: 65vw;">
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+</div>
+<div class="row position-fixed bottom-0 start-0 w-100 m-1">
+    @foreach (var tableInfo in Model.TableInformations)
+    {
+        var cardStyle = tableInfo.TemperatureReading == null || tableInfo.TemperatureReading.Temperature < tableInfo.Probe.MinTemperature ||
+                        tableInfo.TemperatureReading.Temperature > tableInfo.Probe.MaxTemperature
+            ? "text-bg-warning-custom"
+            : "text-bg-light";
+
+
+
+        var wifiIcon = tableInfo.TemperatureReading == null 
+            ? "bi-wifi-off"
+            : tableInfo.Probe.RssiQuality switch
+            {
+                Aquamancy.Models.SignalQuality.Excellent => "bi-wifi",
+                Aquamancy.Models.SignalQuality.Good => "bi-wifi",
+                Aquamancy.Models.SignalQuality.Fair => "bi-wifi-2",
+                Aquamancy.Models.SignalQuality.Weak => "bi-wifi-1",
+                Aquamancy.Models.SignalQuality.VeryPoor => "bi-wifi-1",
+                _ => "bi-question-circle"
+            };
+
+        var wifiColor = tableInfo.TemperatureReading == null 
+            ? "text-danger"
+            : tableInfo.Probe.RssiQuality switch
+            {
+                Aquamancy.Models.SignalQuality.Excellent => "text-success",
+                Aquamancy.Models.SignalQuality.Good => "text-success",
+                Aquamancy.Models.SignalQuality.Fair => "text-warning",
+                Aquamancy.Models.SignalQuality.Weak => "text-danger",
+                Aquamancy.Models.SignalQuality.VeryPoor => "text-danger",
+                _ => "text-secondary"
+            };
+
+        <div class="col-auto gx-2">
+            <div class="card mb-3 text-center p-0" style="max-width: 60rem; font-size: 2rem;">
+                <div class="card-header" style="background-color:@(tableInfo.Probe.Color);">
+                    @tableInfo.Probe.Name.ToUpper()
+                </div>
+                <div class="card-body @(cardStyle) text-center" style="padding: 6px !important;">
+                    @{
+                        var mainTempColor = "";
+                        if(tableInfo.TemperatureReading != null)
+                        {
+                            if (tableInfo.TemperatureReading.Temperature < tableInfo.Probe.MinTemperature)
+                            {
+                                mainTempColor = coldColor;
+                            }
+                            else if (tableInfo.TemperatureReading.Temperature > tableInfo.Probe.MaxTemperature)
+                            {
+                                mainTempColor = hotColor;
+                            }
+                        }
+                    }
+                    <h5 style="font-size: 4rem;color:@mainTempColor" class="card-text fw-bold m-0">@(tableInfo.TemperatureReading != null ? tableInfo.TemperatureReading.Temperature.ToString("F1") + "°C" : "N/A")
+                    </h5>
+                    <p style="font-size: 1rem;" class="card-text m-0 fw-bold">
+                        @if (tableInfo.TemperatureReading != null && tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
+                        {
+
+                            var tendencyColor = tableInfo.Tendency > 0 ? "red" : "dodgerblue";
+                            var tendencySign = tableInfo.Tendency > 0 ? "+" : "";
+                            var tendencyIcon = tableInfo.Tendency > 0 ? "bi-arrow-up-right" : "bi-arrow-down-right";
+                            var tendencyValue = tendencySign + tableInfo.Tendency.ToString("F1") + "°C";
+
+                            <span class="text-center" style="font-size:1rem; color:@tendencyColor;">@tendencyValue</span>
+                            <i class="bi @(tendencyIcon)" style="font-size:1rem;color:@(tendencyColor)"></i>
+                        }
+                        else
+                        {
+                            <span style="font-size:1rem">-</span>
+                        }
+                    </p>
+                    <p style="font-size: 1.25rem;" class="card-text m-0"><b style="color:@coldColor">@($"{tableInfo.Probe.MinTemperature}°C")</b> - <b style="color:@hotColor">@($"{tableInfo.Probe.MaxTemperature}°C")</b></p>
+                    <p style="font-size: 1rem;" class="card-text m-0">
+                        Freq : <b>@tableInfo.Probe.SendFrequencyInSeconds sec</b>
+                    </p>
+                    <p style="font-size: 1rem;" class="card-text m-0">
+                        Dernière com : <b>Il y a @tableInfo.Probe.LastCommunicationAgoDisplay</b>
+                        @if (tableInfo.Probe.RssiQuality != Aquamancy.Models.SignalQuality.Unknown)
+                        {
+                            <i style="font-size: 1rem;" class="bi @wifiIcon @wifiColor" title="@tableInfo.Probe.RssiQuality (@tableInfo.Probe.Rssi dBm)"></i>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart.js/dist/chart.umd.js"></script>
+    <script src="~/lib/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Clock setup
+            function updateClock() {
+                var el = document.getElementById('time');
+                if (!el) return;
+                var now = new Date();
+                var hh = String(now.getHours()).padStart(2, '0');
+                var mm = String(now.getMinutes()).padStart(2, '0');
+                el.textContent = hh + ':' + mm;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Chart setup
+            var canvas = document.getElementById('lineChart');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+
+            var data = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Chart)));
+            const baseFontSize = (Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.size) ? Chart.defaults.font.size : 12;
+            const doubleSize = baseFontSize * @(Model._fontSizeMultiplier);
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    transitions: {},
+                    font: { size: doubleSize },
+                    plugins: {
+                        title: {
+                            text: 'Aquamancy',
+                            display: true,
+                            font: { size: doubleSize }
+                        },
+                        legend: {
+                            display: false,
+                            labels: {
+                                font: { size: doubleSize }
+                            }
+                        },
+                        tooltip: {
+                            titleFont: { size: doubleSize },
+                            bodyFont: { size: doubleSize }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: '#e6e6e6'
+                            },
+                            type: 'time',
+                            time: {
+                                tooltipFormat: 'HH:mm',
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: "HH'h'"
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                font: { size: doubleSize }
+                            },
+                            ticks: {
+                                font: { size: doubleSize }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: '#e6e6e6'
+                            },
+                            min: @Model._minDisplayTemperature,
+                            max: @Model._maxDisplayTemperature,
+                            title: {
+                                display: true,
+                                text: 'Temperature',
+                                font: { size: doubleSize }
+                            },
+                            ticks: {
+                                font: { size: doubleSize }
+                            }
+                        }
+                    }
+                }
+            };
+
+            new Chart(ctx, config);
+
+            // Refresh the page every x
+            setInterval(function () { location.reload(); }, @(Model._pageRefreshIntervalInMiliSeconds));
+        });
+    </script>
+}
