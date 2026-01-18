@@ -7,6 +7,8 @@ import onewire
 import json
 import os
 
+# Voir github.com/letneu/aquamancy/wiki
+
 # Codes d'erreur (nombre de clignotement de la led) :
 # 2 : Erreur de connexion à la sonde
 # 3 : Erreur de connexion au wifi
@@ -39,78 +41,81 @@ def get_unique_id():
 # Fonction de connexion à la sonde de température
 def probe_connect():
     global ds, rom
-    while True:
-        try:
-            datapin = machine.Pin(28)
-            ow = onewire.OneWire(datapin)
-            ds = ds18x20.DS18X20(ow)
+    try:
+        datapin = machine.Pin(28)
+        ow = onewire.OneWire(datapin)
+        ds = ds18x20.DS18X20(ow)
 
-            roms = ds.scan()
-            if not roms:
-                raise Exception("Aucune sonde détectée")
-            rom = roms[0]
-            return
-        except Exception as e:
-            # Erreur de connexion à la sonde, code 2
-            error_blink(2, 60)
-            print("Erreur de connexion à la sonde :", e)
+        roms = ds.scan()
+        if not roms:
+            raise Exception("Aucune sonde détectée")
+        rom = roms[0]
+    except Exception as e:
+        # Erreur de connexion à la sonde, code 2
+        error_blink(2, 60)
+        print("Erreur de connexion à la sonde :", e)
+        return False
+    return True
 
 # Fonction de connexion au réseau Wi-Fi
 def wifi_connect():
     global wlan, server_url
-    while True:
-        try:
-            # Creation du fichier de config si n'existe pas
-            if "config.json" not in os.listdir():
-                with open("config.json", "w") as f:
-                    json.dump(DEFAULT_CONFIG, f)
+    try:
+        # Creation du fichier de config si n'existe pas
+        if "config.json" not in os.listdir():
+            with open("config.json", "w") as f:
+                json.dump(DEFAULT_CONFIG, f)
 
-            with open("config.json") as f:
-                config = json.load(f)
+        with open("config.json") as f:
+            config = json.load(f)
 
-            wifi_ssid = config["wifi_ssid"]
-            wifi_password = config["wifi_password"]
-            server_url = config.get("server_url", DEFAULT_CONFIG["server_url"])
-        except Exception as e:
-            # Erreur de récupération du fichier de config, code 7
-            error_blink(7, 60)
-            print("Erreur de lecture du fichier de configuration :", e)
-            continue
+        wifi_ssid = config["wifi_ssid"]
+        wifi_password = config["wifi_password"]
+        server_url = config.get("server_url", DEFAULT_CONFIG["server_url"])
+    except Exception as e:
+        # Erreur de récupération du fichier de config, code 7
+        error_blink(7, 60)
+        print("Erreur de lecture du fichier de configuration :", e)
+        return False
 
-        try:
-            wlan = network.WLAN(network.STA_IF)
-            wlan.active(True)
-            wlan.connect(wifi_ssid, wifi_password)
+    try:
+        wlan = network.WLAN(network.STA_IF)
+        wlan.active(True)
+        wlan.connect(wifi_ssid, wifi_password)
 
-            print("Connexion Wi-Fi…")
+        print("Connexion Wi-Fi…")
 
-            for y in range(10):
-                time.sleep(2)
-                if wlan.isconnected():
-                    break
+        for y in range(10):
+            time.sleep(2)
+            if wlan.isconnected():
+                break
      
-            if not wlan.isconnected():
-                raise Exception("Échec de la connexion Wi-Fi")
+        if not wlan.isconnected():
+            raise Exception("Échec de la connexion Wi-Fi")
 
-            print("Connecté :", wlan.ifconfig())
-            return
-        except Exception as e:
-            # Erreur de connexion au wifi, code 3
-            error_blink(3, 60)
-            print("Erreur de connexion au wifi :", e)
+        print("Connecté :", wlan.ifconfig())
+    except Exception as e:
+        # Erreur de connexion au wifi, code 3
+        error_blink(3, 60)
+        print("Erreur de connexion au wifi :", e)
+        return False
+    return True
 
 # Fonction de clignotement en cas d'erreur
 def error_blink(blink_count, duration):
-    cycle_duration = 0.5 * blink_count + 4
+    blink_duration = 0.5
+    pause_duration = 4
+
+    cycle_duration = (blink_duration * 2) * blink_count + 4
     cycle_count = int(duration / cycle_duration)
 
     for y in range(cycle_count):
         for i in range(blink_count):
             statusLed.value(1)    
-            time.sleep(0.25)
+            time.sleep(blink_duration)
             statusLed.value(0) 
-            time.sleep(0.25)
-        time.sleep(4)
+            time.sleep(blink_duration)
+        time.sleep(pause_duration)
 
 # Fonction de gestion des exceptions
 def handle_exception(e, error_code):
@@ -118,13 +123,16 @@ def handle_exception(e, error_code):
         
     # Activer le clignotement d'erreur
     error_blink(error_code, 60)
+
+    # Risque de boucle infinie si wifi ou sonde KO, mais d'un autre côté, on ne peut pas continuer ça :(
             
     # Tentative de reco wifi
-    wifi_connect()
+    while not wifi_connect():
+        time.sleep(1)
         
     # Tentative de reco à la sonde
-    probe_connect()
-
+    while not probe_connect():
+        time.sleep(1)
 
 # -------------------------
 # PHASE D'INITIALISATION
