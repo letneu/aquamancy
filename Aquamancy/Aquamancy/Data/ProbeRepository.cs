@@ -31,6 +31,7 @@ namespace Aquamancy.Data
                 created_at DATETIME NOT NULL,
                 last_notified_at DATETIME DEFAULT NULL,
                 last_communication_date DATETIME DEFAULT NULL,
+                last_booted_at DATETIME DEFAULT NULL,
                 rssi INT DEFAULT 0
             );";
 
@@ -43,7 +44,7 @@ namespace Aquamancy.Data
             await conn.OpenAsync();
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "INSERT INTO probes (name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_notified_at, last_communication_date, rssi) VALUES (@name, @machine_name, @color, @min_temperature, @max_temperature, @send_frequency_in_seconds, @tendency_span_hours, @minimum_tendency_change, @created_at, @last_notified_at, @last_communication_date, @rssi); SELECT LAST_INSERT_ID();";
+            cmd.CommandText = "INSERT INTO probes (name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_notified_at, last_communication_date, last_booted_at, rssi) VALUES (@name, @machine_name, @color, @min_temperature, @max_temperature, @send_frequency_in_seconds, @tendency_span_hours, @minimum_tendency_change, @created_at, @last_notified_at, @last_communication_date, @last_booted_at, @rssi); SELECT LAST_INSERT_ID();";
 
             var p1 = cmd.CreateParameter(); p1.ParameterName = "@name"; p1.Value = probe.Name; cmd.Parameters.Add(p1);
             var p2 = cmd.CreateParameter(); p2.ParameterName = "@machine_name"; p2.Value = probe.MachineName; cmd.Parameters.Add(p2);
@@ -56,7 +57,8 @@ namespace Aquamancy.Data
             var p9 = cmd.CreateParameter(); p9.ParameterName = "@created_at"; p9.Value = probe.CreatedAt; cmd.Parameters.Add(p9);
             var p10 = cmd.CreateParameter(); p10.ParameterName = "@last_notified_at"; p10.Value = probe.LastNotifiedAt.HasValue ? (object)probe.LastNotifiedAt.Value : System.DBNull.Value; cmd.Parameters.Add(p10);
             var p11 = cmd.CreateParameter(); p11.ParameterName = "@last_communication_date"; p11.Value = probe.LastCommunicationDate.HasValue ? (object)probe.LastCommunicationDate.Value : System.DBNull.Value; cmd.Parameters.Add(p11);
-            var p12 = cmd.CreateParameter(); p12.ParameterName = "@rssi"; p12.Value = probe.Rssi; cmd.Parameters.Add(p12);
+            var p12 = cmd.CreateParameter(); p12.ParameterName = "@last_booted_at"; p12.Value = probe.LastBootedAt.HasValue ? (object)probe.LastBootedAt.Value : System.DBNull.Value; cmd.Parameters.Add(p12);
+            var p13 = cmd.CreateParameter(); p13.ParameterName = "@rssi"; p13.Value = probe.Rssi; cmd.Parameters.Add(p13);
 
             var res = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(res);
@@ -68,7 +70,7 @@ namespace Aquamancy.Data
             await conn.OpenAsync();
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_notified_at, last_communication_date, rssi FROM probes WHERE id = @id LIMIT 1";
+            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_notified_at, last_communication_date, last_booted_at, rssi FROM probes WHERE id = @id LIMIT 1";
             var p = cmd.CreateParameter(); p.ParameterName = "@id"; p.Value = id; cmd.Parameters.Add(p);
 
             await using var rdr = await cmd.ExecuteReaderAsync();
@@ -88,7 +90,8 @@ namespace Aquamancy.Data
                     CreatedAt = rdr.GetDateTime(9),
                     LastNotifiedAt = rdr.IsDBNull(10) ? (DateTime?)null : rdr.GetDateTime(10),
                     LastCommunicationDate = rdr.IsDBNull(11) ? (DateTime?)null : rdr.GetDateTime(11),
-                    Rssi = rdr.IsDBNull(12) ? 0 : rdr.GetInt32(12)
+                    LastBootedAt = rdr.IsDBNull(12) ? (DateTime?)null : rdr.GetDateTime(12),
+                    Rssi = rdr.IsDBNull(13) ? 0 : rdr.GetInt32(13)
                 };
             }
 
@@ -103,7 +106,7 @@ namespace Aquamancy.Data
             await conn.OpenAsync();
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_notified_at, last_communication_date, rssi FROM probes ORDER BY id";
+            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_notified_at, last_communication_date, last_booted_at, rssi FROM probes ORDER BY id";
 
             await using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
@@ -122,7 +125,8 @@ namespace Aquamancy.Data
                     CreatedAt = rdr.GetDateTime(9),
                     LastNotifiedAt = rdr.IsDBNull(10) ? (DateTime?)null : rdr.GetDateTime(10),
                     LastCommunicationDate = rdr.IsDBNull(11) ? (DateTime?)null : rdr.GetDateTime(11),
-                    Rssi = rdr.IsDBNull(12) ? 0 : rdr.GetInt32(12)
+                    LastBootedAt = rdr.IsDBNull(12) ? (DateTime?)null : rdr.GetDateTime(12),
+                    Rssi = rdr.IsDBNull(13) ? 0 : rdr.GetInt32(13)
                 });
             }
 
@@ -142,16 +146,34 @@ namespace Aquamancy.Data
             await cmd.ExecuteNonQueryAsync();
         }
 
-        public async Task UpdateCommunicationInfoAsync(int probeId, int rssi, System.DateTime lastCommunicationDate)
+        public async Task UpdateCommunicationInfoAsync(int probeId, int rssi, DateTime lastCommunicationDate, DateTime? lastBootedAt)
         {
             await using var conn = _factory.CreateConnection();
             await conn.OpenAsync();
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE probes SET rssi = @rssi, last_communication_date = @lastCommunicationDate WHERE id = @id";
+            cmd.CommandText = $"UPDATE probes SET rssi = @rssi, last_communication_date = @lastCommunicationDate {(lastBootedAt.HasValue ? ", last_booted_at = @lastBootedAt" : "")} WHERE id = @id";
             var p1 = cmd.CreateParameter(); p1.ParameterName = "@rssi"; p1.Value = rssi; cmd.Parameters.Add(p1);
             var p2 = cmd.CreateParameter(); p2.ParameterName = "@lastCommunicationDate"; p2.Value = lastCommunicationDate; cmd.Parameters.Add(p2);
             var p3 = cmd.CreateParameter(); p3.ParameterName = "@id"; p3.Value = probeId; cmd.Parameters.Add(p3);
+
+            if(lastBootedAt.HasValue)
+            {
+                var p4 = cmd.CreateParameter(); p4.ParameterName = "@lastBootedAt"; p4.Value = lastBootedAt.Value; cmd.Parameters.Add(p4);
+            }
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task UpdateLastBootedAtAsync(int probeId, System.DateTime? when)
+        {
+            await using var conn = _factory.CreateConnection();
+            await conn.OpenAsync();
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE probes SET last_booted_at = @when WHERE id = @id";
+            var p1 = cmd.CreateParameter(); p1.ParameterName = "@when"; p1.Value = when.HasValue ? (object)when.Value : System.DBNull.Value; cmd.Parameters.Add(p1);
+            var p2 = cmd.CreateParameter(); p2.ParameterName = "@id"; p2.Value = probeId; cmd.Parameters.Add(p2);
 
             await cmd.ExecuteNonQueryAsync();
         }

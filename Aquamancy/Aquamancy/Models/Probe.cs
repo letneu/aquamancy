@@ -24,6 +24,7 @@ namespace Aquamancy.Models
         public DateTime CreatedAt { get; set; }
         public DateTime? LastNotifiedAt { get; set; }
         public DateTime? LastCommunicationDate { get; set; }
+        public DateTime? LastBootedAt { get; set; }
         public int Rssi { get; set; }
 
         public SignalQuality RssiQuality => Rssi switch

@@ -7,7 +7,7 @@ namespace Aquamancy.Controllers
     [Route("[controller]")]
     public class ApiController(ITemperatureReadingLogic temperatureReadingLogic, IErrorTriggerLogic errorTriggerLogic) : ControllerBase
     {
-        public record PostParams(string MachineName, string Temperature, int rssi);
+        public record PostParams(string MachineName, string Temperature, int Rssi, bool FirstLoop);
 
         private readonly ITemperatureReadingLogic _temperatureReadingLogic = temperatureReadingLogic;
         private readonly IErrorTriggerLogic _errorTriggerLogic = errorTriggerLogic;

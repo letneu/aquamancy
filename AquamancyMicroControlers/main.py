@@ -138,7 +138,7 @@ def handle_exception(e, error_code):
 # PHASE D'INITIALISATION
 # -------------------------
 
-# Variables globales pour la sonde
+# Variables globales pour la sonde de temperature
 ds = None
 rom = None
 
@@ -148,8 +148,15 @@ wlan = None
 # Variable globale pour l'URL du serveur
 server_url = None
 
+# Indicateur pour identifier un reboot côté serveur
+first_loop = True
+
 # Fréquence d'envoi par défaut (en secondes)
 sendFrequencyInSeconds = 60
+
+# Initialisation du watchdog
+# Si le watchdog n'est pas alimenté dans ce délai, la machine redémarre
+wdt = machine.WDT(timeout=600000)
 
 # Initialisation de la LED de statut
 statusLed = machine.Pin(1, machine.Pin.OUT)
@@ -172,6 +179,9 @@ wifi_connect()
 # BOUCLE PRINCIPALE
 # -------------------------
 while True:
+    # Alimenter le watchdog au début de chaque itération
+    wdt.feed()
+    
     # Led éteinte pendant la lecture de la sonde et l'envoi des données
     statusLed.value(0)
 
@@ -195,9 +205,13 @@ while True:
             print("WiFi déconnecté, reconnexion...")
             wifi_connect()
         
+        rssi = wlan.status('rssi')
+        
         payload = {
             "MachineName": uid,
-            "Temperature": str(temp)
+            "Temperature": str(temp),
+            "Rssi": rssi,
+            "FirstLoop": first_loop
         }
     
         r = urequests.post(server_url, json=payload, timeout=15)
@@ -218,10 +232,19 @@ while True:
         handle_exception(e, 5)
         continue
         
+    first_loop = False
+
     # Led allumée pendant la période d'attente pour indiquer que tout va bien
     statusLed.value(1)
 
     # Attente avant le prochain envoi en fonction de la configuration dans la table probe
-    time.sleep(sendFrequencyInSeconds)
+    # Si le sleep est long, on alimente le watchdog pendant l'attente
+    remaining_sleep = sendFrequencyInSeconds
+    while remaining_sleep > 0:
+        sleep_duration = min(remaining_sleep, 60)
+        time.sleep(sleep_duration)
+        remaining_sleep -= sleep_duration
+        if remaining_sleep > 0:
+            wdt.feed()
 
 

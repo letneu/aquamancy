@@ -37,7 +37,7 @@ namespace Aquamancy.Services
                     foreach (var probe in probes)
                     {
                         // Determine how far back we should look for the latest temperature
-                        var probeRefreshFrequency = DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds);
+                        var probeRefreshFrequency = DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds * 2);
                         var defaultLookBack = DateTime.Now.AddHours(-1);
                         var howFarBack = probeRefreshFrequency > defaultLookBack ? probeRefreshFrequency : defaultLookBack;
 
