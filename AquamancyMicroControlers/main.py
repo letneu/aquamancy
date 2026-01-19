@@ -26,10 +26,15 @@ DEFAULT_CONFIG = {
     "server_url": "http://192.168.1.126:5000/api/submit"
 }
 
+# -------------------------
+# FONCTIONS
+# -------------------------
+
 # Fonction de récupération de l'ID unique de la machine
 def get_unique_id():
     while True:
         try:
+            # Id unique mais un peu long et moche
             uid = machine.unique_id().hex()
             print("ID machine :", uid)
             return uid
@@ -42,10 +47,12 @@ def get_unique_id():
 def probe_connect():
     global ds, rom
     try:
+        # Connexion à la sonde sur le GPIO
         datapin = machine.Pin(28)
         ow = onewire.OneWire(datapin)
         ds = ds18x20.DS18X20(ow)
 
+        # On est en onewire mais on a besoin de gérer qu'un seul truc (la sonde))
         roms = ds.scan()
         if not roms:
             raise Exception("Aucune sonde détectée")
@@ -66,9 +73,11 @@ def wifi_connect():
             with open("config.json", "w") as f:
                 json.dump(DEFAULT_CONFIG, f)
 
+        # Miam miam le fichier
         with open("config.json") as f:
             config = json.load(f)
 
+        # Setup des variables
         wifi_ssid = config["wifi_ssid"]
         wifi_password = config["wifi_password"]
         server_url = config.get("server_url", DEFAULT_CONFIG["server_url"])
@@ -106,9 +115,10 @@ def error_blink(blink_count, duration):
     blink_duration = 0.5
     pause_duration = 4
 
-    cycle_duration = (blink_duration * 2) * blink_count + 4
+    cycle_duration = (blink_duration * 2) * blink_count + pause_duration
     cycle_count = int(duration / cycle_duration)
 
+    # On clignote un certain nombre de fois puis dodo pendant [pause_duration]
     for y in range(cycle_count):
         for i in range(blink_count):
             statusLed.value(1)    
@@ -187,7 +197,7 @@ while True:
 
     # Lecture de la température
     try:
-        # temps nécessaire pour la conversion
+        # temps nécessaire pour la conversion, c'est comme ça dans la doc :(
         ds.convert_temp()
         time.sleep_ms(750)
 
@@ -238,7 +248,7 @@ while True:
     statusLed.value(1)
 
     # Attente avant le prochain envoi en fonction de la configuration dans la table probe
-    # Si le sleep est long, on alimente le watchdog pendant l'attente
+    # Si le sleep est long, on alimente le watchdog pendant l'attente en découpant en tranches de 60 secondes
     remaining_sleep = sendFrequencyInSeconds
     while remaining_sleep > 0:
         sleep_duration = min(remaining_sleep, 60)
