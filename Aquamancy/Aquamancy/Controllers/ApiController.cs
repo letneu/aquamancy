@@ -21,7 +21,6 @@ namespace Aquamancy.Controllers
                 {
                     throw new BadHttpRequestException("Missing body");
                 }
-                    
 
                 if (string.IsNullOrWhiteSpace(data.MachineName))
                 {

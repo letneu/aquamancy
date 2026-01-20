@@ -83,7 +83,7 @@ namespace Aquamancy.Pages
                 Chart.datasets.Add(dataset);
 
                 // Only get the latestest based on send frequency
-                var latestReading = readings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 60)).FirstOrDefault();
+                var latestReading = readings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120)).FirstOrDefault();
 
                 var earliestBound = -probe.TendencySpanHours / 2;
                 var oldestBound = -probe.TendencySpanHours;

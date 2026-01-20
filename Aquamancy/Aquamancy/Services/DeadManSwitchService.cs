@@ -11,7 +11,7 @@ namespace Aquamancy.Services
 
         private string _healthCheckUrl = configuration?["DeadManSwitch:HealthCheckUrl"] ?? string.Empty;
         private readonly bool _deadManSwitchEnabled = configuration?.GetValue<bool>("DeadManSwitch:DeadManSwitchEnabled") ?? false;
-        private readonly int _errorThreshold = configuration?.GetValue<int>("DeadManSwitch:ErrorThreshold") ?? 3;
+        private readonly int _errorThreshold = configuration?.GetValue<int>("DeadManSwitch:ErrorThreshold") ?? 12;
         private readonly int _checkIntervalMinutes = configuration?.GetValue<int>("DeadManSwitch:CheckIntervalMinutes") ?? 5;
 
         bool _isAlert;
@@ -48,9 +48,9 @@ namespace Aquamancy.Services
                     if (_isAlert)
                     {
                         await discordNotifierLogic.SendDiscordMessageAsync("Fin de l'alerte, le service externe sur le cloud Azure est de nouveau joignable");
+                        _isAlert = false;
                     }
-
-                    _isAlert = false;
+                    
                     _errorCount = 0;
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
