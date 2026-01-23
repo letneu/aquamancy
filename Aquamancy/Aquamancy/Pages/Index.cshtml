@@ -80,7 +80,7 @@
 
         <div class="col-auto gx-2">
             <div class="card mb-3 text-center p-0" style="max-width: 60rem; font-size: 2rem;">
-                <div class="card-header" style="background-color:@(tableInfo.Probe.Color);">
+                <div data-toggle="tooltip" title="Dernier démarage : @(tableInfo.Probe.LastBootedAt.ToString())" class="card-header" style="background-color:@(tableInfo.Probe.Color);">
                     @tableInfo.Probe.Name.ToUpper()
                 </div>
                 <div class="card-body @(cardStyle) text-center" style="padding: 6px !important;">
@@ -104,7 +104,7 @@
                         @if (tableInfo.TemperatureReading != null && tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
                         {
 
-                            var tendencyColor = tableInfo.Tendency > 0 ? "red" : "dodgerblue";
+                            var tendencyColor = tableInfo.Tendency > 0 ? hotColor : coldColor;
                             var tendencySign = tableInfo.Tendency > 0 ? "+" : "";
                             var tendencyIcon = tableInfo.Tendency > 0 ? "bi-arrow-up-right" : "bi-arrow-down-right";
                             var tendencyValue = tendencySign + tableInfo.Tendency.ToString("F1") + "°C";
@@ -125,7 +125,8 @@
                         Dernière com : <b>Il y a @tableInfo.Probe.LastCommunicationAgoDisplay</b>
                         @if (tableInfo.Probe.RssiQuality != Aquamancy.Models.SignalQuality.Unknown)
                         {
-                            <i style="font-size: 1rem;" class="bi @wifiIcon @wifiColor" title="@tableInfo.Probe.RssiQuality (@tableInfo.Probe.Rssi dBm)"></i>
+                            var titleContent = tableInfo.TemperatureReading != null ? $"{tableInfo.Probe.RssiQuality} - {tableInfo.Probe.Rssi} (dBm)" : "Dernière communication trop ancienne";
+                            <i data-toggle="tooltip" style="font-size: 1rem;" class="bi @wifiIcon @wifiColor" title="@(titleContent)"></i>
                         }
                     </p>
                 </div>
@@ -229,7 +230,7 @@
 
             new Chart(ctx, config);
 
-            // Refresh the page every x
+            // Refresh the page every x - TODO avoid full reload and use ajax ?
             setInterval(function () { location.reload(); }, @(Model._pageRefreshIntervalInMiliSeconds));
         });
     </script>

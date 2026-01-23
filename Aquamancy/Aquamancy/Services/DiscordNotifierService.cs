@@ -7,8 +7,9 @@ namespace Aquamancy.Services
     public class DiscordNotifierService(IServiceScopeFactory scopeFactory, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic, ILogger<DiscordNotifierService> logger) : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
-        private readonly int _alertFrequencyInHours = configuration.GetValue<int>("Discord:AlertFrequencyInHours");
+        private readonly int _alertFrequencyInHours = configuration?.GetValue<int>("Discord:AlertFrequencyInHours") ?? 8;
         private readonly bool _discordNotifierEnabled = configuration?.GetValue<bool>("Discord:NotificationEnabled") ?? false;
+        private readonly int _checkIntervalMinutes = configuration?.GetValue<int>("Discord:CheckIntervalMinutes") ?? 10;
         private readonly IErrorTriggerLogic _errorTriggerLogic = errorTriggerLogic;
         private readonly ILogger<DiscordNotifierService> _logger = logger;
 
@@ -25,7 +26,7 @@ namespace Aquamancy.Services
                 try
                 {
                     // Wait first so we have time to receive data from probes after a restart
-                    await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
+                    await Task.Delay(TimeSpan.FromMinutes(_checkIntervalMinutes), stoppingToken);
 
                     using var scope = _scopeFactory.CreateScope();
                     var probeRepo = scope.ServiceProvider.GetRequiredService<IProbeRepository>();

@@ -39,7 +39,7 @@ namespace Aquamancy.Logic
                 probe = newProbe;
 
                 // Warn on discord
-                await _discordNotifierLogic.SendDiscordMessageAsync($"Une nouvelle sonde a été ajoutée : {machine}, terminez la configuration depuis la table Probes");
+                await _discordNotifierLogic.SendDiscordMessageAsync($"Une nouvelle sonde a été ajoutée : {machine}, terminez la configuration depuis la table Probes avec l'id {newId}");
             }
             else
             {
