@@ -6,7 +6,7 @@ import time
 import onewire
 import json
 import os
-
+# v1.0 du 25/01 a 19:20x
 # Voir github.com/letneu/aquamancy/wiki
 
 # Codes d'erreur (nombre de clignotement de la led) :
