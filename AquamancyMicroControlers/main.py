@@ -21,10 +21,12 @@ import os
 # CONFIG PAR DÉFAUT
 # -------------------------
 DEFAULT_CONFIG = {
-    "wifi_ssid": "ssid",
-    "wifi_password": "password",
+    "wifi_ssid": "",
+    "wifi_password": "",
     "server_url": "http://192.168.1.126:5000/api/submit"
 }
+# Sur les anciens modèles c'est 28 et 27 pour les nouveaux
+temperature_data_ping = 27
 
 # -------------------------
 # FONCTIONS
@@ -48,7 +50,7 @@ def probe_connect():
     global ds, rom
     try:
         # Connexion à la sonde sur le GPIO
-        datapin = machine.Pin(28)
+        datapin = machine.Pin(temperature_data_ping)
         ow = onewire.OneWire(datapin)
         ds = ds18x20.DS18X20(ow)
 
@@ -164,10 +166,6 @@ first_loop = True
 # Fréquence d'envoi par défaut (en secondes)
 sendFrequencyInSeconds = 60
 
-# Initialisation du watchdog
-# Si le watchdog n'est pas alimenté dans ce délai, la machine redémarre
-wdt = machine.WDT(timeout=600000)
-
 # Initialisation de la LED de statut
 statusLed = machine.Pin(1, machine.Pin.OUT)
 
@@ -189,8 +187,6 @@ wifi_connect()
 # BOUCLE PRINCIPALE
 # -------------------------
 while True:
-    # Alimenter le watchdog au début de chaque itération
-    wdt.feed()
     
     # Led éteinte pendant la lecture de la sonde et l'envoi des données
     statusLed.value(0)
@@ -216,6 +212,7 @@ while True:
             wifi_connect()
         
         rssi = wlan.status('rssi')
+        print("RSSI :", rssi, " db")
         
         payload = {
             "MachineName": uid,
@@ -254,7 +251,5 @@ while True:
         sleep_duration = min(remaining_sleep, 60)
         time.sleep(sleep_duration)
         remaining_sleep -= sleep_duration
-        if remaining_sleep > 0:
-            wdt.feed()
 
 
