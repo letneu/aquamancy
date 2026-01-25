@@ -245,11 +245,6 @@ while True:
     statusLed.value(1)
 
     # Attente avant le prochain envoi en fonction de la configuration dans la table probe
-    # Si le sleep est long, on alimente le watchdog pendant l'attente en découpant en tranches de 60 secondes
-    remaining_sleep = sendFrequencyInSeconds
-    while remaining_sleep > 0:
-        sleep_duration = min(remaining_sleep, 60)
-        time.sleep(sleep_duration)
-        remaining_sleep -= sleep_duration
+    time.sleep(sendFrequencyInSeconds)
 
 
