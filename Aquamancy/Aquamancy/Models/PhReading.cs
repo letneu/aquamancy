@@ -1,10 +1,10 @@
-namespace Aquamancy.Models
+﻿namespace Aquamancy.Models
 {
-    public class TemperatureReading : IReading
+    public class PhReading : IReading
     {
         public int Id { get; set; }
         public int ProbeId { get; set; }
         public DateTime Timestamp { get; set; }
-        public double Temperature { get; set; }
+        public double Ph { get; set; }
     }
 }

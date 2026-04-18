@@ -37,6 +37,17 @@ namespace Aquamancy.Models
             _ => SignalQuality.VeryPoor
         };
 
+        public string RssiQualityLabel => RssiQuality switch
+        {
+            SignalQuality.Unknown => "Inconnu",
+            SignalQuality.Excellent => "Excellent",
+            SignalQuality.Good => "Bon",
+            SignalQuality.Fair => "Moyen",
+            SignalQuality.Weak => "Faible",
+            SignalQuality.VeryPoor => "Très faible",
+            _ => "Inconnu"
+        };
+
         public string LastCommunicationAgoDisplay => LastCommunicationDate.HasValue
         ? ((int)(DateTime.Now - LastCommunicationDate.Value).TotalMinutes) switch
         {

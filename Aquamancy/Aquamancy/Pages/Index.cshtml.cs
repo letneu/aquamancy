@@ -19,8 +19,10 @@ namespace Aquamancy.Pages
         private readonly int _displayLastHours = configuration.GetValue<int>("Chart:DisplayLastHours");
         public int _fontSizeMultiplier = configuration.GetValue<int>("Chart:FontSizeMultiplier");
         public int _pageRefreshIntervalInMiliSeconds = configuration.GetValue<int>("Chart:RefreshIntervalInSeconds") * 1000;
-        public int _minDisplayTemperature = configuration.GetValue<int>("Chart:MinDisplayTemperature");
-        public int _maxDisplayTemperature = configuration.GetValue<int>("Chart:MaxDisplayTemperature");
+
+
+        public string hotColor = "#c85e5e";
+        public string coldColor = "#a1ccf4";
 
         public async Task OnGetAsync()
         {
@@ -54,7 +56,8 @@ namespace Aquamancy.Pages
                 {
                     label = probe.Name,
                     backgroundColor = probe.Color,
-                    borderColor = probe.Color
+                    borderColor = probe.Color,
+                    tension = 0.4
                 };
 
                 foreach (var reading in readings)
@@ -68,14 +71,14 @@ namespace Aquamancy.Pages
                     dataset.data.Add(data);
 
                     var pointBackgroundColor = reading.Temperature >= probe.MinTemperature && reading.Temperature <= probe.MaxTemperature ? probe.Color :
-                                reading.Temperature < probe.MinTemperature ? "#007bff" :
-                                "#dc3545";
+                                reading.Temperature < probe.MinTemperature ? coldColor + "20" :
+                                hotColor + "20";
 
                     dataset.pointBackgroundColor.Add(pointBackgroundColor);
                     dataset.pointBorderColor.Add(pointBackgroundColor);
                     dataset.pointStyle.Add("circle");
 
-                    var pointRadius = reading.Temperature >= probe.MinTemperature && reading.Temperature <= probe.MaxTemperature ? 2 : 6;
+                    var pointRadius = reading.Temperature >= probe.MinTemperature && reading.Temperature <= probe.MaxTemperature ? 2 : 12;
                     dataset.pointRadius.Add(pointRadius);
                     dataset.pointHoverRadius.Add(pointRadius + 5);
                 }

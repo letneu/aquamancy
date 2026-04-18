@@ -27,6 +27,7 @@
             public string? backgroundColor { get; set; }
             public string? borderColor { get; set; }
             public bool fill { get; set; }
+            public double? tension { get; set; }
             public List<VectorDto> data { get; set; }
             public List<string> pointBackgroundColor { get; set; }
             public List<string> pointBorderColor { get; set; }

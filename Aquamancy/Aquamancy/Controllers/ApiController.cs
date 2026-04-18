@@ -1,15 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using Aquamancy.ILogic;
+using Aquamancy.Dto;
 
 namespace Aquamancy.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ApiController(ITemperatureReadingLogic temperatureReadingLogic, IErrorTriggerLogic errorTriggerLogic) : ControllerBase
+    public class ApiController(IReadingLogic readingLogic, IErrorTriggerLogic errorTriggerLogic) : ControllerBase
     {
-        public record PostParams(string MachineName, string Temperature, int Rssi, bool FirstLoop);
-
-        private readonly ITemperatureReadingLogic _temperatureReadingLogic = temperatureReadingLogic;
+        private readonly IReadingLogic _readingLogic = readingLogic;
         private readonly IErrorTriggerLogic _errorTriggerLogic = errorTriggerLogic;
 
         [HttpPost("submit")]
@@ -32,9 +31,9 @@ namespace Aquamancy.Controllers
                     throw new BadHttpRequestException("Missing Temperature");
                 }
 
-                var result = await _temperatureReadingLogic.Insert(data);
+                var (Success, ErrorMessage, Probe) = await _readingLogic.Insert(data);
 
-                return Ok(new { isTooHot = result.Temperature > result.Probe.MaxTemperature, isTooCold = result.Temperature < result.Probe.MinTemperature, SendFrequencyInSeconds = result.Probe.SendFrequencyInSeconds });
+                return Ok(new {  IsSuccess = Success, ErrorMessage = ErrorMessage, SendFrequencyInSeconds = Probe.SendFrequencyInSeconds });
             }
             catch (Exception ex)
             {

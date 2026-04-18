@@ -41,7 +41,6 @@ namespace Aquamancy.Services
                         var probeRefreshFrequency = DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds * 2);
                         var defaultLookBack = DateTime.Now.AddHours(-2);
                         var howFarBack = probeRefreshFrequency < defaultLookBack ? probeRefreshFrequency : defaultLookBack;
-
                         var latestTemp = (await tempRepo.GetForProbeAsync(probe.Id, howFarBack)).FirstOrDefault();
 
                         // Only notify once per [_alertFrequencyInHours] per probe

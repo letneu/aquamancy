@@ -2,8 +2,6 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Aquamancy";
-    var hotColor = "#c85e5e";
-    var coldColor = "#a1ccf4";
 }
 <div class="row align-items-center mb-3 position-fixed top-0 start-0 w-100">
     <div class="col-4">
@@ -90,11 +88,11 @@
                         {
                             if (tableInfo.TemperatureReading.Temperature < tableInfo.Probe.MinTemperature)
                             {
-                                mainTempColor = coldColor;
+                                mainTempColor = Model.coldColor;
                             }
                             else if (tableInfo.TemperatureReading.Temperature > tableInfo.Probe.MaxTemperature)
                             {
-                                mainTempColor = hotColor;
+                                mainTempColor = Model.hotColor;
                             }
                         }
                     }
@@ -104,7 +102,7 @@
                         @if (tableInfo.TemperatureReading != null && tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
                         {
 
-                            var tendencyColor = tableInfo.Tendency > 0 ? hotColor : coldColor;
+                            var tendencyColor = tableInfo.Tendency > 0 ? Model.hotColor : Model.coldColor;
                             var tendencySign = tableInfo.Tendency > 0 ? "+" : "";
                             var tendencyIcon = tableInfo.Tendency > 0 ? "bi-arrow-up-right" : "bi-arrow-down-right";
                             var tendencyValue = tendencySign + tableInfo.Tendency.ToString("F1") + "°C";
@@ -117,7 +115,7 @@
                             <span style="font-size:1rem">-</span>
                         }
                     </p>
-                    <p style="font-size: 1.25rem;" class="card-text m-0"><b style="color:@coldColor">@($"{tableInfo.Probe.MinTemperature}°C")</b> - <b style="color:@hotColor">@($"{tableInfo.Probe.MaxTemperature}°C")</b></p>
+                    <p style="font-size: 1.25rem;" class="card-text m-0"><b style="color:@Model.coldColor">@($"{tableInfo.Probe.MinTemperature}°C")</b> - <b style="color:@Model.hotColor">@($"{tableInfo.Probe.MaxTemperature}°C")</b></p>
                     <p style="font-size: 1rem;" class="card-text m-0">
                         Freq : <b>@tableInfo.Probe.SendFrequencyInSeconds sec</b>
                     </p>
@@ -125,7 +123,7 @@
                         Dernière com : <b>Il y a @tableInfo.Probe.LastCommunicationAgoDisplay</b>
                         @if (tableInfo.Probe.RssiQuality != Aquamancy.Models.SignalQuality.Unknown)
                         {
-                            var titleContent = tableInfo.TemperatureReading != null ? $"{tableInfo.Probe.RssiQuality} - {tableInfo.Probe.Rssi} (dBm)" : "Dernière communication trop ancienne";
+                            var titleContent = tableInfo.TemperatureReading != null ? $"{tableInfo.Probe.RssiQualityLabel} - {tableInfo.Probe.Rssi} (dBm)" : "Dernière communication trop ancienne";
                             <i data-toggle="tooltip" style="font-size: 1rem;" class="bi @wifiIcon @wifiColor" title="@(titleContent)"></i>
                         }
                     </p>
@@ -210,11 +208,10 @@
                             }
                         },
                         y: {
+                            grace: '0.5',
                             grid: {
                                 color: '#e6e6e6'
                             },
-                            min: @Model._minDisplayTemperature,
-                            max: @Model._maxDisplayTemperature,
                             title: {
                                 display: true,
                                 text: 'Temperature',
