@@ -33,7 +33,12 @@ namespace Aquamancy.Controllers
 
                 var (Success, ErrorMessage, Probe) = await _readingLogic.Insert(data);
 
-                return Ok(new {  IsSuccess = Success, ErrorMessage = ErrorMessage, SendFrequencyInSeconds = Probe.SendFrequencyInSeconds });
+                return Ok(new {  IsSuccess = Success,
+                    ErrorMessage = ErrorMessage,
+                    SendFrequencyInSeconds = Probe.SendFrequencyInSeconds,
+                    ColorR = Probe.ColorR,
+                    ColorG = Probe.ColorG,
+                    ColorB = Probe.ColorB });
             }
             catch (Exception ex)
             {

@@ -8,11 +8,11 @@ namespace Aquamancy.Logic
     public class ReadingLogic(IProbeRepository probeRepository,
         IDiscordNotifierLogic discordNotifierLogic,
         ITemperatureReadingLogic temperatureReadingLogic,
-        IPhReadingLogic phReadingLogic) : IReadingLogic
+        ITurbidityReadingLogic turbidityReadingLogic) : IReadingLogic
     {
         private readonly IProbeRepository _probeRepo = probeRepository;
         private readonly ITemperatureReadingLogic _temperatureReadingLogic = temperatureReadingLogic;
-        private readonly IPhReadingLogic _phReadingLogic = phReadingLogic;
+        private readonly ITurbidityReadingLogic _turbidityReadingLogic = turbidityReadingLogic;
         private readonly IDiscordNotifierLogic _discordNotifierLogic = discordNotifierLogic;
 
         public async Task<(bool Success, string? ErrorMessage, Probe Probe)> Insert(PostParams postParams)
@@ -58,13 +58,13 @@ namespace Aquamancy.Logic
                 return (false, tempResult.ErrorMessage, probe);
             }
 
-            // PH is optional for now, only for testing
-            if (!string.IsNullOrWhiteSpace(postParams.Ph))
+            // Turbidity is optional for now, only for testing
+            if (!string.IsNullOrWhiteSpace(postParams.Turbidity))
             {
-                var phResult = await _phReadingLogic.Insert(postParams, probe);
-                if (!phResult.Success)
+                var turbidityResult = await _turbidityReadingLogic.Insert(postParams, probe);
+                if (!turbidityResult.Success)
                 {
-                    return (false, phResult.ErrorMessage, probe);
+                    return (false, turbidityResult.ErrorMessage, probe);
                 }
             }
 

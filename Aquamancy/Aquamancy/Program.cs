@@ -21,11 +21,14 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddSingleton<IDbConnectionFactory>(new MariaDbConnectionFactory(connectionString));
 builder.Services.AddScoped<IProbeRepository, ProbeRepository>();
 builder.Services.AddScoped<ITemperatureRepository, TemperatureRepository>();
+builder.Services.AddScoped<ITurbidityRepository, TurbidityRepository>();
 
 builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<IDiscordNotifierLogic, DiscordNotifierLogic>();
 builder.Services.AddScoped<ITemperatureReadingLogic, TemperatureReadingLogic>();
+builder.Services.AddScoped<ITurbidityReadingLogic, TurbidityReadingLogic>();
+builder.Services.AddScoped<IReadingLogic, ReadingLogic>();
 builder.Services.AddSingleton<IErrorTriggerLogic, ErrorTriggerLogic>();
 
 builder.Services.AddHostedService<DiscordNotifierService>();
@@ -37,8 +40,17 @@ using (var scope = app.Services.CreateScope())
 {
     var provRepo = scope.ServiceProvider.GetRequiredService<IProbeRepository>();
     var tempRepo = scope.ServiceProvider.GetRequiredService<ITemperatureRepository>();
+    var turbidityRepo = scope.ServiceProvider.GetRequiredService<ITurbidityRepository>();
     provRepo.EnsureTableExistsAsync().GetAwaiter().GetResult();
     tempRepo.EnsureTableExistsAsync().GetAwaiter().GetResult();
+    turbidityRepo.EnsureTableExistsAsync().GetAwaiter().GetResult();
+
+    // Seed test data in development mode
+    if (app.Environment.IsDevelopment())
+    {
+        //var seeder = new DatabaseSeeder(provRepo, tempRepo, turbidityRepo);
+        //seeder.SeedTestDataAsync().GetAwaiter().GetResult();
+    }
 }
 
 // Configure the HTTP request pipeline.

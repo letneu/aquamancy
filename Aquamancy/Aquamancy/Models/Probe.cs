@@ -27,6 +27,35 @@ namespace Aquamancy.Models
         public DateTime? LastBootedAt { get; set; }
         public int Rssi { get; set; }
 
+        public int ColorR => ConvertHexToRgbComponent(Color, 0);
+        public int ColorG => ConvertHexToRgbComponent(Color, 1);
+        public int ColorB => ConvertHexToRgbComponent(Color, 2);
+
+        private static int ConvertHexToRgbComponent(string hexColor, int component)
+        {
+            if (string.IsNullOrWhiteSpace(hexColor))
+                return 0;
+
+            // Supprimer le # si présent
+            hexColor = hexColor.TrimStart('#');
+
+            // Vérifier que c'est un format valide (6 caractères)
+            if (hexColor.Length != 6)
+                return 0;
+
+            try
+            {
+                // Convertir la paire d'hex correspondante en décimal
+                int startIndex = component * 2;
+                string hexPair = hexColor.Substring(startIndex, 2);
+                return Convert.ToInt32(hexPair, 16);
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
         public SignalQuality RssiQuality => Rssi switch
         {
             0 => SignalQuality.Unknown,

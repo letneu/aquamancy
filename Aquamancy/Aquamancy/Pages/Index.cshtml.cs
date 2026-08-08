@@ -6,14 +6,16 @@ using Aquamancy.IData;
 
 namespace Aquamancy.Pages
 {
-    public class IndexModel(IProbeRepository probeRepo, ITemperatureRepository tempRepo, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic) : PageModel
+    public class IndexModel(IProbeRepository probeRepo, ITemperatureRepository tempRepo, ITurbidityRepository turbidityRepo, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic) : PageModel
     {
-        public List<(Probe Probe, TemperatureReading? TemperatureReading, double Tendency)> TableInformations { get; set; } = [];
+        public List<(Probe Probe, TemperatureReading? TemperatureReading, TurbidityReading? TurbidityReading, double Tendency)> TableInformations { get; set; } = [];
 
-        public ChartDto Chart { get; set; } = new ChartDto();
+        public ChartDto TemperatureChart { get; set; } = new ChartDto();
+        public ChartDto TurbidityChart { get; set; } = new ChartDto();
 
         private readonly IProbeRepository _probeRepo = probeRepo;
         private readonly ITemperatureRepository _tempRepo = tempRepo;
+        private readonly ITurbidityRepository _turbidityRepo = turbidityRepo;
         public readonly IErrorTriggerLogic ErrorTriggerLogic = errorTriggerLogic;
 
         private readonly int _displayLastHours = configuration.GetValue<int>("Chart:DisplayLastHours");
@@ -26,7 +28,8 @@ namespace Aquamancy.Pages
 
         public async Task OnGetAsync()
         {
-            Chart = new ChartDto();
+            TemperatureChart = new ChartDto();
+            TurbidityChart = new ChartDto();
 
             int n = _displayLastHours;
 
@@ -36,8 +39,9 @@ namespace Aquamancy.Pages
             // Align to the start of the hour
             var startHour = new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, 0, 0);
 
-            Chart.labels = [.. (Enumerable.Range(0, n)
-                .Select(i => startHour.AddHours(i)))];
+            var labels = Enumerable.Range(0, n).Select(i => startHour.AddHours(i)).ToArray();
+            TemperatureChart.labels = [.. labels];
+            TurbidityChart.labels = [.. labels];
 
             // Load probes from repository
             var probes = (await _probeRepo.GetAllAsync()).ToArray();
@@ -47,58 +51,76 @@ namespace Aquamancy.Pages
                 return;
             }
 
-            foreach(var probe in probes)
+            foreach (var probe in probes)
             {
                 // Get recent readings for this probe
-                var readings = (await _tempRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-n))).ToList();
+                var temperatureReadings = (await _tempRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-n))).ToList();
+                var turbidityReadings = (await _turbidityRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-n))).ToList();
 
-                ChartDto.DatasetDto dataset = new()
-                {
-                    label = probe.Name,
-                    backgroundColor = probe.Color,
-                    borderColor = probe.Color,
-                    tension = 0.4
-                };
+                // Create temperature dataset
+                var temperatureDataset = CreateDataset(
+                    probe,
+                    temperatureReadings.Select(r => (r.Timestamp, r.Temperature, IsInRange: r.Temperature >= probe.MinTemperature && r.Temperature <= probe.MaxTemperature))
+                );
+                TemperatureChart.datasets.Add(temperatureDataset);
 
-                foreach (var reading in readings)
-                {
-                    var data = new ChartDto.DatasetDto.VectorDto
-                    {
-                        x = reading.Timestamp,
-                        y = reading.Temperature
-                    };
+                // Create turbidity dataset
+                var turbidityDataset = CreateDataset(
+                    probe,
+                    turbidityReadings.Select(r => (r.Timestamp, r.Turbidity, IsInRange: true)) // Assuming turbidity doesn't have min/max range yet
+                );
+                TurbidityChart.datasets.Add(turbidityDataset);
 
-                    dataset.data.Add(data);
-
-                    var pointBackgroundColor = reading.Temperature >= probe.MinTemperature && reading.Temperature <= probe.MaxTemperature ? probe.Color :
-                                reading.Temperature < probe.MinTemperature ? coldColor + "20" :
-                                hotColor + "20";
-
-                    dataset.pointBackgroundColor.Add(pointBackgroundColor);
-                    dataset.pointBorderColor.Add(pointBackgroundColor);
-                    dataset.pointStyle.Add("circle");
-
-                    var pointRadius = reading.Temperature >= probe.MinTemperature && reading.Temperature <= probe.MaxTemperature ? 2 : 12;
-                    dataset.pointRadius.Add(pointRadius);
-                    dataset.pointHoverRadius.Add(pointRadius + 5);
-                }
-
-                Chart.datasets.Add(dataset);
-
-                // Only get the latestest based on send frequency
-                var latestReading = readings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120)).FirstOrDefault();
+                // Only get the latest based on send frequency
+                var latestReading = temperatureReadings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120)).FirstOrDefault();
+                var latestTurbidityReading = turbidityReadings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120)).FirstOrDefault();
 
                 var earliestBound = -probe.TendencySpanHours / 2;
                 var oldestBound = -probe.TendencySpanHours;
-                var recentMean = readings?.Where(r => r.Timestamp > DateTime.Now.AddHours(earliestBound))?.Select(r => r.Temperature)?.DefaultIfEmpty(0.0).Average() ?? 0;
-                var olderMean = readings?.Where(r => r.Timestamp > DateTime.Now.AddHours(oldestBound) && r.Timestamp < DateTime.Now.AddHours(earliestBound))?.Select(r => r.Temperature)?.DefaultIfEmpty(0.0).Average() ?? 0;
+                var recentMean = temperatureReadings?.Where(r => r.Timestamp > DateTime.Now.AddHours(earliestBound))?.Select(r => r.Temperature)?.DefaultIfEmpty(0.0).Average() ?? 0;
+                var olderMean = temperatureReadings?.Where(r => r.Timestamp > DateTime.Now.AddHours(oldestBound) && r.Timestamp < DateTime.Now.AddHours(earliestBound))?.Select(r => r.Temperature)?.DefaultIfEmpty(0.0).Average() ?? 0;
 
                 // Don't calculate if we don't have enough data
                 var tendency = recentMean != 0 && olderMean != 0 ? recentMean - olderMean : 0;
 
-
-                TableInformations.Add((probe, latestReading, tendency));
+                TableInformations.Add((probe, latestReading, latestTurbidityReading, tendency));
             }
+        }
+
+        private ChartDto.DatasetDto CreateDataset<T>(Probe probe, IEnumerable<(DateTime Timestamp, T Value, bool IsInRange)> readings)
+        {
+            var dataset = new ChartDto.DatasetDto
+            {
+                label = probe.Name,
+                backgroundColor = probe.Color,
+                borderColor = probe.Color,
+                tension = 0.4
+            };
+
+            foreach (var reading in readings)
+            {
+                var data = new ChartDto.DatasetDto.VectorDto
+                {
+                    x = reading.Timestamp,
+                    y = Convert.ToDouble(reading.Value)
+                };
+
+                dataset.data.Add(data);
+
+                var pointBackgroundColor = reading.IsInRange ? probe.Color :
+                            Convert.ToDouble(reading.Value) < probe.MinTemperature ? coldColor + "20" :
+                            hotColor + "20";
+
+                dataset.pointBackgroundColor.Add(pointBackgroundColor);
+                dataset.pointBorderColor.Add(pointBackgroundColor);
+                dataset.pointStyle.Add("circle");
+
+                var pointRadius = reading.IsInRange ? 2 : 12;
+                dataset.pointRadius.Add(pointRadius);
+                dataset.pointHoverRadius.Add(pointRadius + 5);
+            }
+
+            return dataset;
         }
     }
 }

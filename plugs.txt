@@ -1,0 +1,22 @@
+Sonde temperature
+
+jaune GPIO 17 (pin 22)
+noir GND (pin 23)
+rouge 3v3 (pin 36)
+
+resistant 4k7 entre jaune et rouge
+
+
+LED RGB
+
+noir (pin 13)
+rouge GPIO 10 (pin 14)
+bleu GPIO 11 (pin 15)
+vert GPIO 12 (pin 16)
+
+Sonde turbi
+
+noir GND (pin 33)
+
+jaune GPIO 28 (pin 34)
+rouge 3v3 (pin 36)

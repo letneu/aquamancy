@@ -4,10 +4,10 @@
     ViewData["Title"] = "Aquamancy";
 }
 <div class="row align-items-center mb-3 position-fixed top-0 start-0 w-100">
-    <div class="col-4">
-        <div id="time" class="text-start text-center" style="font-size:10rem;">
+    <div class="col-2">
+        <div id="time" class="text-start text-center" style="font-size:6rem;">
         </div>
-        <div class="text-center" style="font-size:3rem;">
+        <div class="text-center" style="font-size:2rem;">
             @System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(DateTime.Now.ToString("dddd dd MMMM yyyy"))
         </div>
         @if(Model.ErrorTriggerLogic.HasError)
@@ -36,9 +36,18 @@
             </div>
         }
     </div>
-    <div class="col-8">
-        <div class="card-body  mb-8" style="position: relative;height: 65vh;width: 65vw;">
-            <canvas id="lineChart"></canvas>
+    <div class="col-10">
+        <div class="row">
+            <div class="col-6">
+                <div class="card-body mb-8" style="position: relative;height: 65vh;">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card-body mb-8" style="position: relative;height: 65vh;">
+                    <canvas id="turbidityChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -96,35 +105,49 @@
                             }
                         }
                     }
-                    <h5 style="font-size: 4rem;color:@mainTempColor" class="card-text fw-bold m-0">@(tableInfo.TemperatureReading != null ? tableInfo.TemperatureReading.Temperature.ToString("F1") + "°C" : "N/A")
-                    </h5>
-                    <p style="font-size: 1rem;" class="card-text m-0 fw-bold">
-                        @if (tableInfo.TemperatureReading != null && tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
-                        {
+                    <div class="row mx-0">
+                        <div class="@(tableInfo.TurbidityReading != null ? "col-6" : "col-12") px-1">
+                            <p style="font-size: 0.75rem;" class="card-text m-0 text-muted">Température</p>
+                            <h5 style="font-size: 2.5rem;color:@mainTempColor" class="card-text fw-bold m-0">@(tableInfo.TemperatureReading != null ? tableInfo.TemperatureReading.Temperature.ToString("F1") + "°C" : "N/A")
+                            </h5>
+                            <p style="font-size: 0.85rem;" class="card-text m-0 fw-bold">
+                                @if (tableInfo.TemperatureReading != null && tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
+                                {
 
-                            var tendencyColor = tableInfo.Tendency > 0 ? Model.hotColor : Model.coldColor;
-                            var tendencySign = tableInfo.Tendency > 0 ? "+" : "";
-                            var tendencyIcon = tableInfo.Tendency > 0 ? "bi-arrow-up-right" : "bi-arrow-down-right";
-                            var tendencyValue = tendencySign + tableInfo.Tendency.ToString("F1") + "°C";
+                                    var tendencyColor = tableInfo.Tendency > 0 ? Model.hotColor : Model.coldColor;
+                                    var tendencySign = tableInfo.Tendency > 0 ? "+" : "";
+                                    var tendencyIcon = tableInfo.Tendency > 0 ? "bi-arrow-up-right" : "bi-arrow-down-right";
+                                    var tendencyValue = tendencySign + tableInfo.Tendency.ToString("F1") + "°C";
 
-                            <span class="text-center" style="font-size:1rem; color:@tendencyColor;">@tendencyValue</span>
-                            <i class="bi @(tendencyIcon)" style="font-size:1rem;color:@(tendencyColor)"></i>
-                        }
-                        else
+                                    <span class="text-center" style="font-size:0.85rem; color:@tendencyColor;">@tendencyValue</span>
+                                    <i class="bi @(tendencyIcon)" style="font-size:0.85rem;color:@(tendencyColor)"></i>
+                                }
+                                else
+                                {
+                                    <span style="font-size:0.85rem">-</span>
+                                }
+                            </p>
+                        </div>
+                        @if (tableInfo.TurbidityReading != null)
                         {
-                            <span style="font-size:1rem">-</span>
+                            <div class="col-6 px-1 border-start">
+                                <p style="font-size: 0.75rem;" class="card-text m-0 text-muted">Turbidité</p>
+                                <h5 style="font-size: 2.5rem;" class="card-text fw-bold m-0">@(tableInfo.TurbidityReading.Turbidity.ToString("F1"))
+                                </h5>
+                                <p style="font-size: 0.85rem;" class="card-text m-0">NTU</p>
+                            </div>
                         }
-                    </p>
-                    <p style="font-size: 1.25rem;" class="card-text m-0"><b style="color:@Model.coldColor">@($"{tableInfo.Probe.MinTemperature}°C")</b> - <b style="color:@Model.hotColor">@($"{tableInfo.Probe.MaxTemperature}°C")</b></p>
-                    <p style="font-size: 1rem;" class="card-text m-0">
+                    </div>
+                    <p style="font-size: 1.1rem;" class="card-text m-0 mt-1"><b style="color:@Model.coldColor">@($"{tableInfo.Probe.MinTemperature}°C")</b> - <b style="color:@Model.hotColor">@($"{tableInfo.Probe.MaxTemperature}°C")</b></p>
+                    <p style="font-size: 0.9rem;" class="card-text m-0">
                         Freq : <b>@tableInfo.Probe.SendFrequencyInSeconds sec</b>
                     </p>
-                    <p style="font-size: 1rem;" class="card-text m-0">
+                    <p style="font-size: 0.9rem;" class="card-text m-0">
                         Dernière com : <b>Il y a @tableInfo.Probe.LastCommunicationAgoDisplay</b>
                         @if (tableInfo.Probe.RssiQuality != Aquamancy.Models.SignalQuality.Unknown)
                         {
                             var titleContent = tableInfo.TemperatureReading != null ? $"{tableInfo.Probe.RssiQualityLabel} - {tableInfo.Probe.Rssi} (dBm)" : "Dernière communication trop ancienne";
-                            <i data-toggle="tooltip" style="font-size: 1rem;" class="bi @wifiIcon @wifiColor" title="@(titleContent)"></i>
+                            <i data-toggle="tooltip" style="font-size: 0.9rem;" class="bi @wifiIcon @wifiColor" title="@(titleContent)"></i>
                         }
                     </p>
                 </div>
@@ -150,82 +173,90 @@
             updateClock();
             setInterval(updateClock, 1000);
 
-            // Chart setup
-            var canvas = document.getElementById('lineChart');
-            if (!canvas) return;
-            var ctx = canvas.getContext('2d');
+            // Generic chart creation function
+            function createChart(canvasId, data, yAxisTitle) {
+                var canvas = document.getElementById(canvasId);
+                if (!canvas) return null;
+                var ctx = canvas.getContext('2d');
 
-            var data = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Chart)));
-            const baseFontSize = (Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.size) ? Chart.defaults.font.size : 12;
-            const doubleSize = baseFontSize * @(Model._fontSizeMultiplier);
+                const baseFontSize = (Chart && Chart.defaults && Chart.defaults.font && Chart.defaults.font.size) ? Chart.defaults.font.size : 12;
+                const doubleSize = baseFontSize * @(Model._fontSizeMultiplier);
 
-            const config = {
-                type: 'line',
-                data: data,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    transitions: {},
-                    font: { size: doubleSize },
-                    plugins: {
-                        title: {
-                            text: 'Aquamancy',
-                            display: true,
-                            font: { size: doubleSize }
-                        },
-                        legend: {
-                            display: false,
-                            labels: {
+                const config = {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        transitions: {},
+                        font: { size: doubleSize },
+                        plugins: {
+                            title: {
+                                text: yAxisTitle,
+                                display: true,
                                 font: { size: doubleSize }
-                            }
-                        },
-                        tooltip: {
-                            titleFont: { size: doubleSize },
-                            bodyFont: { size: doubleSize }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                color: '#e6e6e6'
                             },
-                            type: 'time',
-                            time: {
-                                tooltipFormat: 'HH:mm',
-                                unit: 'hour',
-                                displayFormats: {
-                                    hour: "HH'h'"
+                            legend: {
+                                display: false,
+                                labels: {
+                                    font: { size: doubleSize }
                                 }
                             },
-                            title: {
-                                display: true,
-                                text: 'Date',
-                                font: { size: doubleSize }
-                            },
-                            ticks: {
-                                font: { size: doubleSize }
+                            tooltip: {
+                                titleFont: { size: doubleSize },
+                                bodyFont: { size: doubleSize }
                             }
                         },
-                        y: {
-                            grace: '0.5',
-                            grid: {
-                                color: '#e6e6e6'
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: '#e6e6e6'
+                                },
+                                type: 'time',
+                                time: {
+                                    tooltipFormat: 'HH:mm',
+                                    unit: 'hour',
+                                    displayFormats: {
+                                        hour: "HH'h'"
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Date',
+                                    font: { size: doubleSize }
+                                },
+                                ticks: {
+                                    font: { size: doubleSize }
+                                }
                             },
-                            title: {
-                                display: true,
-                                text: 'Temperature',
-                                font: { size: doubleSize }
-                            },
-                            ticks: {
-                                font: { size: doubleSize }
+                            y: {
+                                grace: '0.5',
+                                grid: {
+                                    color: '#e6e6e6'
+                                },
+                                title: {
+                                    display: true,
+                                    text: yAxisTitle,
+                                    font: { size: doubleSize }
+                                },
+                                ticks: {
+                                    font: { size: doubleSize }
+                                }
                             }
                         }
                     }
-                }
-            };
+                };
 
-            new Chart(ctx, config);
+                return new Chart(ctx, config);
+            }
+
+            // Create charts
+            var temperatureData = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TemperatureChart)));
+            var turbidityData = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TurbidityChart)));
+
+            createChart('temperatureChart', temperatureData, 'Température');
+            createChart('turbidityChart', turbidityData, 'Turbidité');
 
             // Refresh the page every x - TODO avoid full reload and use ajax ?
             setInterval(function () { location.reload(); }, @(Model._pageRefreshIntervalInMiliSeconds));
