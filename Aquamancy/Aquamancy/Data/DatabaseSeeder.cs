@@ -7,13 +7,13 @@ namespace Aquamancy.Data
     {
         private readonly IProbeRepository _probeRepo;
         private readonly ITemperatureRepository _temperatureRepo;
-        private readonly ITurbidityRepository _turbidityRepo;
+        private readonly ITdsRepository _tdsRepo;
 
-        public DatabaseSeeder(IProbeRepository probeRepo, ITemperatureRepository temperatureRepo, ITurbidityRepository turbidityRepo)
+        public DatabaseSeeder(IProbeRepository probeRepo, ITemperatureRepository temperatureRepo, ITdsRepository tdsRepo)
         {
             _probeRepo = probeRepo;
             _temperatureRepo = temperatureRepo;
-            _turbidityRepo = turbidityRepo;
+            _tdsRepo = tdsRepo;
         }
 
         public async Task SeedTestDataAsync()
@@ -40,8 +40,6 @@ namespace Aquamancy.Data
                 MinTemperature = 24.0,
                 MaxTemperature = 26.0,
                 SendFrequencyInSeconds = 300,
-                TendencySpanHours = 2,
-                MinimumTendencyChange = 0.3,
                 CreatedAt = DateTime.Now.AddDays(-30),
                 LastCommunicationDate = DateTime.Now.AddMinutes(-5),
                 LastBootedAt = DateTime.Now.AddDays(-7),
@@ -56,8 +54,6 @@ namespace Aquamancy.Data
                 MinTemperature = 25.0,
                 MaxTemperature = 27.0,
                 SendFrequencyInSeconds = 300,
-                TendencySpanHours = 2,
-                MinimumTendencyChange = 0.3,
                 CreatedAt = DateTime.Now.AddDays(-30),
                 LastCommunicationDate = DateTime.Now.AddMinutes(-3),
                 LastBootedAt = DateTime.Now.AddDays(-5),
@@ -72,8 +68,6 @@ namespace Aquamancy.Data
                 MinTemperature = 23.0,
                 MaxTemperature = 25.0,
                 SendFrequencyInSeconds = 300,
-                TendencySpanHours = 2,
-                MinimumTendencyChange = 0.3,
                 CreatedAt = DateTime.Now.AddDays(-15),
                 LastCommunicationDate = DateTime.Now.AddMinutes(-10),
                 LastBootedAt = DateTime.Now.AddDays(-3),
@@ -106,9 +100,9 @@ namespace Aquamancy.Data
 
             foreach (var probe in probes)
             {
-                // Base temperature and turbidity for this probe
+                // Base temperature and TDS for this probe
                 var baseTemp = (probe.MinTemperature + probe.MaxTemperature) / 2;
-                var baseTurbidity = 1.5 + random.NextDouble() * 2.0; // entre 1.5 et 3.5 NTU
+                var baseTds = 150 + random.NextDouble() * 200.0; // entre 150 et 350 ppm
 
                 // Generate readings every 5 minutes for the specified hours
                 var totalMinutes = hoursBack * 60;
@@ -128,13 +122,13 @@ namespace Aquamancy.Data
                         temperature += random.NextDouble() < 0.5 ? -1.5 : 1.5;
                     }
 
-                    // Turbidity variation (mostly stable with occasional spikes)
-                    var turbidity = baseTurbidity + (random.NextDouble() - 0.5) * 0.3;
+                    // TDS variation (mostly stable with occasional spikes)
+                    var tds = baseTds + (random.NextDouble() - 0.5) * 20.0;
 
-                    // Occasional turbidity spike (algae bloom, feeding, etc.)
+                    // Occasional TDS spike (water change, additives, etc.)
                     if (random.NextDouble() < 0.03) // 3% chance
                     {
-                        turbidity += random.NextDouble() * 3.0;
+                        tds += random.NextDouble() * 100.0;
                     }
 
                     // Add temperature reading
@@ -145,12 +139,12 @@ namespace Aquamancy.Data
                         Temperature = Math.Round(temperature, 2)
                     });
 
-                    // Add turbidity reading
-                    await _turbidityRepo.AddAsync(new TurbidityReading
+                    // Add TDS reading
+                    await _tdsRepo.AddAsync(new TdsReading
                     {
                         ProbeId = probe.Id,
                         Timestamp = timestamp,
-                        Turbidity = Math.Round(turbidity, 2)
+                        Tds = Math.Round(tds, 2)
                     });
                 }
             }

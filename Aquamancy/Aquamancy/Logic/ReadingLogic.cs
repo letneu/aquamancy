@@ -8,14 +8,14 @@ namespace Aquamancy.Logic
     public class ReadingLogic(IProbeRepository probeRepository,
         IDiscordNotifierLogic discordNotifierLogic,
         ITemperatureReadingLogic temperatureReadingLogic,
-        ITurbidityReadingLogic turbidityReadingLogic) : IReadingLogic
+        ITdsReadingLogic tdsReadingLogic) : IReadingLogic
     {
         private readonly IProbeRepository _probeRepo = probeRepository;
         private readonly ITemperatureReadingLogic _temperatureReadingLogic = temperatureReadingLogic;
-        private readonly ITurbidityReadingLogic _turbidityReadingLogic = turbidityReadingLogic;
+        private readonly ITdsReadingLogic _tdsReadingLogic = tdsReadingLogic;
         private readonly IDiscordNotifierLogic _discordNotifierLogic = discordNotifierLogic;
 
-        public async Task<(bool Success, string? ErrorMessage, Probe Probe)> Insert(PostParams postParams)
+        public async Task<(bool Success, string? ErrorMessage, Probe Probe, int ColorR, int ColorG, int ColorB)> Insert(PostParams postParams)
         {
 
             // Find the probe by machine name (case-insensitive match)
@@ -42,7 +42,7 @@ namespace Aquamancy.Logic
                 probe = newProbe;
 
                 // Warn on discord
-                await _discordNotifierLogic.SendDiscordMessageAsync($"Une nouvelle sonde a été ajoutée : {machine}, terminez la configuration depuis la table Probes avec l'id {newId}");
+                await _discordNotifierLogic.SendDiscordMessageAsync($"Une nouvelle sonde a été ajoutée : {machine} avec l'id {newId}");
             }
             else
             {
@@ -55,20 +55,39 @@ namespace Aquamancy.Logic
             var tempResult = await _temperatureReadingLogic.Insert(postParams, probe);
             if (!tempResult.Success)
             {
-                return (false, tempResult.ErrorMessage, probe);
+                return (false, tempResult.ErrorMessage, probe, 0, 0, 0);
             }
 
-            // Turbidity is optional for now, only for testing
-            if (!string.IsNullOrWhiteSpace(postParams.Turbidity))
+            // TDS is optional for now, only for testing
+            if (!string.IsNullOrWhiteSpace(postParams.Tds))
             {
-                var turbidityResult = await _turbidityReadingLogic.Insert(postParams, probe);
-                if (!turbidityResult.Success)
+                var tdsResult = await _tdsReadingLogic.Insert(postParams, probe);
+                if (!tdsResult.Success)
                 {
-                    return (false, turbidityResult.ErrorMessage, probe);
+                    return (false, tdsResult.ErrorMessage, probe, 0, 0, 0);
                 }
             }
 
-            return (true, null, probe);
+            // Determine the color based on the temperature relative to the probe's range
+            // Too cold -> light blue, too hot -> orange, normal -> green
+            var (colorR, colorG, colorB) = GetColorForTemperature(tempResult.Temperature, probe);
+
+            return (true, null, probe, colorR, colorG, colorB);
+        }
+
+        private static (int ColorR, int ColorG, int ColorB) GetColorForTemperature(double temperature, Probe probe)
+        {
+            if (temperature < probe.MinTemperature)
+            {
+                return (0, 0, 255); // light blue (too cold)
+            }
+
+            if (temperature > probe.MaxTemperature)
+            {
+                return (255, 0, 0); // red (too hot)
+            }
+
+            return (0, 128, 0); // green (normal)
         }
     }
 }

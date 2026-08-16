@@ -31,14 +31,17 @@ namespace Aquamancy.Controllers
                     throw new BadHttpRequestException("Missing Temperature");
                 }
 
-                var (Success, ErrorMessage, Probe) = await _readingLogic.Insert(data);
+
+                //data = data with { Tds = null };
+
+                var (Success, ErrorMessage, Probe, ColorR, ColorG, ColorB) = await _readingLogic.Insert(data);
 
                 return Ok(new {  IsSuccess = Success,
                     ErrorMessage = ErrorMessage,
                     SendFrequencyInSeconds = Probe.SendFrequencyInSeconds,
-                    ColorR = Probe.ColorR,
-                    ColorG = Probe.ColorG,
-                    ColorB = Probe.ColorB });
+                    ColorR = ColorR,
+                    ColorG = ColorG,
+                    ColorB = ColorB });
             }
             catch (Exception ex)
             {

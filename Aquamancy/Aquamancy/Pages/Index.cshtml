@@ -3,12 +3,99 @@
 @{
     ViewData["Title"] = "Aquamancy";
 }
+<style>
+    .probe-settings-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-align: center;
+        padding: 0.5rem;
+        background-color: rgba(33, 37, 41, 0.92);
+        color: #fff;
+        border-radius: inherit;
+    }
+
+    .probe-card:hover .probe-settings-overlay {
+        display: flex;
+    }
+
+    .probe-settings-gear {
+        font-size: 3rem;
+        animation: probe-gear-spin 4s linear infinite;
+    }
+
+    .probe-settings-text {
+        font-size: 1.1rem;
+    }
+
+    @@keyframes probe-gear-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    #probeSettingsModal .modal-content {
+        background-color: #212529;
+        color: #dee2e6;
+        border: 1px solid #495057;
+    }
+
+    #probeSettingsModal .modal-header,
+    #probeSettingsModal .modal-footer {
+        border-color: #495057;
+    }
+
+    #probeSettingsModal .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    #probeSettingsModal .form-control {
+        background-color: #2b3035;
+        border-color: #495057;
+        color: #dee2e6;
+    }
+
+    #probeSettingsModal .form-control:focus {
+        background-color: #2b3035;
+        border-color: #86b7fe;
+        color: #dee2e6;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    #probeSettingsModal .form-control:disabled,
+    #probeSettingsModal .form-control[readonly] {
+        background-color: #1a1d20;
+        color: #adb5bd;
+    }
+
+    #probeSettingsModal .form-control-color {
+        background-color: #2b3035;
+    }
+
+    #probeSettingsModal .form-text {
+        color: #adb5bd;
+    }
+
+    #probeSettingsModal .form-range {
+        accent-color: #0d6efd;
+    }
+</style>
 <div class="row align-items-center mb-3 position-fixed top-0 start-0 w-100">
     <div class="col-2">
         <div id="time" class="text-start text-center" style="font-size:6rem;">
         </div>
         <div class="text-center" style="font-size:2rem;">
             @System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(DateTime.Now.ToString("dddd dd MMMM yyyy"))
+        </div>
+        <div class="progress mt-2 mx-3" role="progressbar" aria-label="Temps avant le prochain rafraîchissement" aria-valuemin="0" aria-valuemax="100" style="height: 0.75rem;">
+            <div id="refreshProgressBar" class="progress-bar bg-secondary" style="width: 0%;"></div>
+        </div>
+        <div class="text-center text-light mt-1 mx-3" style="font-size:0.75rem;">
+            Prochain rafraîchissement de la page
         </div>
         @if(Model.ErrorTriggerLogic.HasError)
         {
@@ -45,7 +132,7 @@
             </div>
             <div class="col-6">
                 <div class="card-body mb-8" style="position: relative;height: 65vh;">
-                    <canvas id="turbidityChart"></canvas>
+                    <canvas id="tdsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -86,7 +173,12 @@
             };
 
         <div class="col-auto gx-2" style="min-width: 260px;">
-            <div class="card mb-3 text-center p-0" style="max-width: 60rem; font-size: 2rem;">
+            <div class="card mb-3 text-center p-0 probe-card position-relative" style="max-width: 60rem; font-size: 2rem; cursor: pointer;"
+                 data-probe-id="@tableInfo.Probe.Id" role="button" tabindex="0" title="Cliquez pour paramétrer la sonde">
+                <div class="probe-settings-overlay">
+                    <i class="bi bi-gear-fill probe-settings-gear"></i>
+                    <span class="probe-settings-text">Cliquez pour paramétrer la sonde</span>
+                </div>
                 <div data-toggle="tooltip" title="Dernier démarage : @(tableInfo.Probe.LastBootedAt.ToString())" class="card-header" style="background-color:@(tableInfo.Probe.Color);">
                     @tableInfo.Probe.Name.ToUpper()
                 </div>
@@ -105,36 +197,30 @@
                             }
                         }
                     }
+                    @{
+                        var temperatureDisplay = new Aquamancy.Dto.ReadingDisplayDto
+                        {
+                            Label = "Température",
+                            Value = tableInfo.TemperatureReading?.Temperature,
+                            Unit = "°C",
+                            ValueColor = mainTempColor
+                        };
+                        var tdsDisplay = new Aquamancy.Dto.ReadingDisplayDto
+                        {
+                            Label = "TDS",
+                            Value = tableInfo.TdsReading?.Tds,
+                            ValueFormat = "F0",
+                            Unit = "ppm"
+                        };
+                    }
                     <div class="row mx-0">
-                        <div class="@(tableInfo.TurbidityReading != null ? "col-6" : "col-12") px-1">
-                            <p style="font-size: 0.75rem;" class="card-text m-0 text-muted">Température</p>
-                            <h5 style="font-size: 2.5rem;color:@mainTempColor" class="card-text fw-bold m-0">@(tableInfo.TemperatureReading != null ? tableInfo.TemperatureReading.Temperature.ToString("F1") + "°C" : "N/A")
-                            </h5>
-                            <p style="font-size: 0.85rem;" class="card-text m-0 fw-bold">
-                                @if (tableInfo.TemperatureReading != null && tableInfo.Tendency > tableInfo.Probe.MinimumTendencyChange || tableInfo.Tendency < -tableInfo.Probe.MinimumTendencyChange)
-                                {
-
-                                    var tendencyColor = tableInfo.Tendency > 0 ? Model.hotColor : Model.coldColor;
-                                    var tendencySign = tableInfo.Tendency > 0 ? "+" : "";
-                                    var tendencyIcon = tableInfo.Tendency > 0 ? "bi-arrow-up-right" : "bi-arrow-down-right";
-                                    var tendencyValue = tendencySign + tableInfo.Tendency.ToString("F1") + "°C";
-
-                                    <span class="text-center" style="font-size:0.85rem; color:@tendencyColor;">@tendencyValue</span>
-                                    <i class="bi @(tendencyIcon)" style="font-size:0.85rem;color:@(tendencyColor)"></i>
-                                }
-                                else
-                                {
-                                    <span style="font-size:0.85rem">-</span>
-                                }
-                            </p>
+                        <div class="@(tableInfo.TdsReading != null ? "col-6" : "col-12") px-1">
+                            <partial name="_ReadingDisplay" model="temperatureDisplay" />
                         </div>
-                        @if (tableInfo.TurbidityReading != null)
+                        @if (tableInfo.TdsReading != null)
                         {
                             <div class="col-6 px-1 border-start">
-                                <p style="font-size: 0.75rem;" class="card-text m-0 text-muted">Turbidité</p>
-                                <h5 style="font-size: 2.5rem;" class="card-text fw-bold m-0">@(tableInfo.TurbidityReading.Turbidity.ToString("F1"))
-                                </h5>
-                                <p style="font-size: 0.85rem;" class="card-text m-0">NTU</p>
+                                <partial name="_ReadingDisplay" model="tdsDisplay" />
                             </div>
                         }
                     </div>
@@ -156,6 +242,69 @@
     }
 </div>
 
+<div class="modal fade" id="probeSettingsModal" tabindex="-1" aria-labelledby="probeSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form id="probeSettingsForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="probe-Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="probeSettingsModalLabel">Paramétrer la sonde</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="probeSettingsError" class="alert alert-danger d-none" role="alert"></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-Name" class="form-label mb-0">Nom</label>
+                            <div class="form-text mt-0 mb-1">Nom d'affichage</div>
+                            <input type="text" class="form-control" name="Name" id="probe-Name" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-MachineName" class="form-label mb-0">Nom machine</label>
+                            <div class="form-text mt-0 mb-1">Identifiant du microcontrôleur</div>
+                            <input type="text" class="form-control" id="probe-MachineName" readonly disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-MinTemperature" class="form-label mb-0" style="color:@Model.coldColor">Température min (°C)</label>
+                            <div class="form-text mt-0 mb-1">Seuil minimum avant alerte</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" class="form-range flex-grow-1 probe-slider" data-number="probe-MinTemperature" min="0" max="40" step="1" />
+                                <input type="number" step="1" class="form-control probe-number" style="max-width: 6rem;" name="MinTemperature" id="probe-MinTemperature" />
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-MaxTemperature" class="form-label mb-0" style="color:@Model.hotColor">Température max (°C)</label>
+                            <div class="form-text mt-0 mb-1">Seuil maximum avant alerte</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" class="form-range flex-grow-1 probe-slider" data-number="probe-MaxTemperature" min="0" max="40" step="1" />
+                                <input type="number" step="1" class="form-control probe-number" style="max-width: 6rem;" name="MaxTemperature" id="probe-MaxTemperature" />
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-Color" class="form-label mb-0">Couleur</label>
+                            <div class="form-text mt-0 mb-1">Couleur d'affichage</div>
+                            <input type="color" class="form-control form-control-color" name="Color" id="probe-Color" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-SendFrequencyInSeconds" class="form-label mb-0">Fréquence d'envoi (secondes)</label>
+                            <div class="form-text mt-0 mb-1">Fréquence à laquelle la sonde envoie des données au serveur</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" class="form-range flex-grow-1 probe-slider" data-number="probe-SendFrequencyInSeconds" min="1" max="3600" step="1" />
+                                <input type="number" step="1" min="1" class="form-control probe-number" style="max-width: 6rem;" name="SendFrequencyInSeconds" id="probe-SendFrequencyInSeconds" />
+                            </div>
+                        </div>
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script src="~/lib/chart.js/dist/chart.umd.js"></script>
     <script src="~/lib/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -172,6 +321,118 @@
             }
             updateClock();
             setInterval(updateClock, 1000);
+
+            // Probe settings modal
+            (function () {
+                var modalEl = document.getElementById('probeSettingsModal');
+                if (!modalEl || typeof bootstrap === 'undefined') return;
+
+                var modal = new bootstrap.Modal(modalEl);
+                var form = document.getElementById('probeSettingsForm');
+                var errorEl = document.getElementById('probeSettingsError');
+
+                // Met en pause le rafraîchissement automatique tant que la modale est ouverte
+                window.probeModalOpen = false;
+                modalEl.addEventListener('shown.bs.modal', function () { window.probeModalOpen = true; });
+                modalEl.addEventListener('hidden.bs.modal', function () { window.probeModalOpen = false; });
+
+                function setValue(id, value) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = value == null ? '' : value;
+                }
+
+                // Synchronisation des sliders avec les champs numériques
+                function syncSlidersFromNumbers() {
+                    document.querySelectorAll('#probeSettingsModal .probe-slider').forEach(function (slider) {
+                        var number = document.getElementById(slider.getAttribute('data-number'));
+                        if (number && number.value !== '') {
+                            slider.value = number.value;
+                        }
+                    });
+                }
+
+                document.querySelectorAll('#probeSettingsModal .probe-slider').forEach(function (slider) {
+                    var number = document.getElementById(slider.getAttribute('data-number'));
+                    if (!number) return;
+                    slider.addEventListener('input', function () { number.value = slider.value; });
+                    number.addEventListener('input', function () { slider.value = number.value; });
+                });
+
+                // Force des entiers pour les champs de température (min/max)
+                ['probe-MinTemperature', 'probe-MaxTemperature'].forEach(function (id) {
+                    var number = document.getElementById(id);
+                    if (!number) return;
+                    number.addEventListener('change', function () {
+                        if (number.value === '') return;
+                        var rounded = Math.round(parseFloat(number.value));
+                        if (!isNaN(rounded)) {
+                            number.value = rounded;
+                            var slider = document.querySelector('#probeSettingsModal .probe-slider[data-number="' + id + '"]');
+                            if (slider) slider.value = rounded;
+                        }
+                    });
+                });
+
+                function openForProbe(probeId) {
+                    errorEl.classList.add('d-none');
+                    errorEl.textContent = '';
+                    fetch('?handler=Probe&id=' + encodeURIComponent(probeId), {
+                        headers: { 'Accept': 'application/json' }
+                    })
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('Impossible de récupérer la sonde.');
+                            return r.json();
+                        })
+                        .then(function (p) {
+                            setValue('probe-Id', p.id);
+                            setValue('probe-Name', p.name);
+                            setValue('probe-MachineName', p.machineName);
+                            setValue('probe-Color', p.color || '#007bff');
+                            setValue('probe-MinTemperature', p.minTemperature);
+                            setValue('probe-MaxTemperature', p.maxTemperature);
+                            setValue('probe-SendFrequencyInSeconds', p.sendFrequencyInSeconds);
+                            syncSlidersFromNumbers();
+                            modal.show();
+                        })
+                        .catch(function (e) {
+                            errorEl.textContent = e.message;
+                            errorEl.classList.remove('d-none');
+                            modal.show();
+                        });
+                }
+
+                document.querySelectorAll('.probe-card').forEach(function (card) {
+                    function handler() { openForProbe(card.getAttribute('data-probe-id')); }
+                    card.addEventListener('click', handler);
+                    card.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+                    });
+                });
+
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    errorEl.classList.add('d-none');
+                    var formData = new FormData(form);
+                    var token = form.querySelector('input[name="__RequestVerificationToken"]');
+                    fetch('?handler=UpdateProbe', {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': token ? token.value : '' },
+                        body: formData
+                    })
+                        .then(function (r) {
+                            if (!r.ok) throw new Error('Échec de la mise à jour.');
+                            return r.json();
+                        })
+                        .then(function () {
+                            modal.hide();
+                            window.location.reload();
+                        })
+                        .catch(function (err) {
+                            errorEl.textContent = err.message;
+                            errorEl.classList.remove('d-none');
+                        });
+                });
+            })();
 
             // Generic chart creation function
             function createChart(canvasId, data, yAxisTitle) {
@@ -222,7 +483,7 @@
                                     }
                                 },
                                 title: {
-                                    display: true,
+                                    display: false,
                                     text: 'Date',
                                     font: { size: doubleSize }
                                 },
@@ -236,7 +497,7 @@
                                     color: '#e6e6e6'
                                 },
                                 title: {
-                                    display: true,
+                                    display: false,
                                     text: yAxisTitle,
                                     font: { size: doubleSize }
                                 },
@@ -253,13 +514,70 @@
 
             // Create charts
             var temperatureData = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TemperatureChart)));
-            var turbidityData = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TurbidityChart)));
+            var tdsData = @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TdsChart)));
+
+            // Génère une image à partir d'un emoji/glyphe, utilisable comme pointStyle Chart.js.
+            // 'color' force la couleur du glyphe (ignoré par les emojis couleur comme 🔥).
+            function makeEmojiImage(emoji, size, color) {
+                var canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                var ctx = canvas.getContext('2d');
+                ctx.font = (size - 2) + 'px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (color) ctx.fillStyle = color;
+                ctx.fillText(emoji, size / 2, size / 2);
+                var img = new Image(size, size);
+                img.src = canvas.toDataURL();
+                return img;
+            }
+
+            // Remplace les jetons de forme "emoji" par de vraies images dans chaque dataset
+            function applyEmojiPointStyles(chartData) {
+                var flameImg = makeEmojiImage('🔥', 22);
+                // Flocon texte '❄' coloré en bleu (couleur fiable, indépendante de la police emoji)
+                var snowImg = makeEmojiImage('❄', 22, '@Model.coldColor');
+                (chartData.datasets || []).forEach(function (dataset) {
+                    if (!Array.isArray(dataset.pointStyle)) return;
+                    dataset.pointStyle = dataset.pointStyle.map(function (style) {
+                        if (style === 'flame') return flameImg;
+                        if (style === 'snow') return snowImg;
+                        return style;
+                    });
+                });
+            }
+
+            applyEmojiPointStyles(temperatureData);
+            applyEmojiPointStyles(tdsData);
 
             createChart('temperatureChart', temperatureData, 'Température');
-            createChart('turbidityChart', turbidityData, 'Turbidité');
+            createChart('tdsChart', tdsData, 'TDS');
 
             // Refresh the page every x - TODO avoid full reload and use ajax ?
-            setInterval(function () { location.reload(); }, @(Model._pageRefreshIntervalInMiliSeconds));
+            var refreshInterval = @(Model._pageRefreshIntervalInMiliSeconds);
+            var refreshStart = Date.now();
+            var progressBar = document.getElementById('refreshProgressBar');
+
+            function updateRefreshProgress() {
+                if (!progressBar) return;
+                // Pause le compteur tant que la modale de paramétrage est ouverte
+                if (window.probeModalOpen) {
+                    refreshStart = Date.now() - lastElapsed;
+                    return;
+                }
+                var elapsed = Date.now() - refreshStart;
+                lastElapsed = elapsed;
+                var percent = Math.min(100, (elapsed / refreshInterval) * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.setAttribute('aria-valuenow', Math.round(percent));
+                if (elapsed >= refreshInterval) {
+                    location.reload();
+                }
+            }
+            var lastElapsed = 0;
+            updateRefreshProgress();
+            setInterval(updateRefreshProgress, 200);
         });
     </script>
 }

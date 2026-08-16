@@ -19,8 +19,6 @@ namespace Aquamancy.Models
         public double MinTemperature { get; set; }
         public double MaxTemperature { get; set; }
         public int SendFrequencyInSeconds { get; set; } = 60;
-        public int TendencySpanHours { get; set; } = 2;
-        public double MinimumTendencyChange { get; set; } = 0.3;
         public DateTime CreatedAt { get; set; }
         public DateTime? LastNotifiedAt { get; set; }
         public DateTime? LastCommunicationDate { get; set; }

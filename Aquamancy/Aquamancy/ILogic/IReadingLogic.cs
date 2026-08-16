@@ -5,6 +5,6 @@ namespace Aquamancy.ILogic
 {
     public interface IReadingLogic
     {
-        Task<(bool Success, string? ErrorMessage, Probe Probe)> Insert(PostParams postParams);
+        Task<(bool Success, string? ErrorMessage, Probe Probe, int ColorR, int ColorG, int ColorB)> Insert(PostParams postParams);
     }
 }

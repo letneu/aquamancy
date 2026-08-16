@@ -38,6 +38,11 @@ body {
   color: #e6e6e6;
 }
 
+/* .text-muted (Bootstrap) force une couleur sombre avec !important : le rendre lisible sur fond sombre */
+.card .text-muted {
+    color: rgba(230,230,230,0.65) !important;
+}
+
 .card-header {
     color: #000; /* en-têtes restent distincts */
     border-color: rgba(255,255,255,0.06);

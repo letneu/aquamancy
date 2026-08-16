@@ -10,5 +10,6 @@ namespace Aquamancy.IData
         Task EnsureTableExistsAsync();
         Task UpdateLastNotifiedAsync(int probeId, System.DateTime? when);
         Task UpdateCommunicationInfoAsync(int probeId, int rssi, System.DateTime lastCommunicationDate, DateTime? lastBootedAt);
+        Task UpdateSettingsAsync(Probe probe);
     }
 }

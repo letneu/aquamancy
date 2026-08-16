@@ -1,17 +1,17 @@
 -- Script SQL pour ajouter des données de test dans Aquamancy
--- Ce script crée 3 sondes et génère des données de température et turbidité sur 24h
+-- Ce script crée 3 sondes et génère des données de température et TDS sur 24h
 
 -- Nettoyer les données existantes (optionnel, décommenter si nécessaire)
 -- DELETE FROM temperature_readings;
--- DELETE FROM turbidity_readings;
+-- DELETE FROM tds_readings;
 -- DELETE FROM probes;
 
 -- Créer 3 sondes de test
-INSERT INTO probes (name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, tendency_span_hours, minimum_tendency_change, created_at, last_communication_date, last_booted_at, rssi)
+INSERT INTO probes (name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, created_at, last_communication_date, last_booted_at, rssi)
 VALUES 
-	('Aquarium Principal', 'probe-1', '#3498db', 24.0, 26.0, 300, 2, 0.3, DATE_SUB(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL 5 MINUTE), DATE_SUB(NOW(), INTERVAL 7 DAY), -65),
-	('Aquarium Récifal', 'probe-2', '#e74c3c', 25.0, 27.0, 300, 2, 0.3, DATE_SUB(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL 3 MINUTE), DATE_SUB(NOW(), INTERVAL 5 DAY), -55),
-	('Bassin Quarantaine', 'probe-3', '#2ecc71', 23.0, 25.0, 300, 2, 0.3, DATE_SUB(NOW(), INTERVAL 15 DAY), DATE_SUB(NOW(), INTERVAL 10 MINUTE), DATE_SUB(NOW(), INTERVAL 3 DAY), -72);
+	('Aquarium Principal', 'probe-1', '#3498db', 24.0, 26.0, 300, DATE_SUB(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL 5 MINUTE), DATE_SUB(NOW(), INTERVAL 7 DAY), -65),
+	('Aquarium Récifal', 'probe-2', '#e74c3c', 25.0, 27.0, 300, DATE_SUB(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL 3 MINUTE), DATE_SUB(NOW(), INTERVAL 5 DAY), -55),
+	('Bassin Quarantaine', 'probe-3', '#2ecc71', 23.0, 25.0, 300, DATE_SUB(NOW(), INTERVAL 15 DAY), DATE_SUB(NOW(), INTERVAL 10 MINUTE), DATE_SUB(NOW(), INTERVAL 3 DAY), -72);
 
 -- Récupérer les IDs des sondes créées
 SET @probe1_id = (SELECT id FROM probes WHERE machine_name = 'probe-1');
@@ -64,13 +64,13 @@ FROM (
 ) numbers
 WHERE n < 288;
 
--- Générer des données de turbidité pour les dernières 24h
--- Aquarium Principal (turbidité moyenne 2.5 NTU)
-INSERT INTO turbidity_readings (probe_id, timestamp, turbidity)
+-- Générer des données de TDS pour les dernières 24h
+-- Aquarium Principal (TDS moyen 250 ppm)
+INSERT INTO tds_readings (probe_id, timestamp, tds)
 SELECT 
 	@probe1_id,
 	DATE_SUB(NOW(), INTERVAL (1440 - (n * 5)) MINUTE) as timestamp,
-	ROUND(2.5 + (RAND() - 0.5) * 0.8, 2) as turbidity
+	ROUND(250 + (RAND() - 0.5) * 40, 2) as tds
 FROM (
 	SELECT a.N + b.N * 10 + c.N * 100 as n
 	FROM 
@@ -80,12 +80,12 @@ FROM (
 ) numbers
 WHERE n < 288;
 
--- Aquarium Récifal (turbidité moyenne 1.8 NTU)
-INSERT INTO turbidity_readings (probe_id, timestamp, turbidity)
+-- Aquarium Récifal (TDS moyen 180 ppm)
+INSERT INTO tds_readings (probe_id, timestamp, tds)
 SELECT 
 	@probe2_id,
 	DATE_SUB(NOW(), INTERVAL (1440 - (n * 5)) MINUTE) as timestamp,
-	ROUND(1.8 + (RAND() - 0.5) * 0.6, 2) as turbidity
+	ROUND(180 + (RAND() - 0.5) * 30, 2) as tds
 FROM (
 	SELECT a.N + b.N * 10 + c.N * 100 as n
 	FROM 
@@ -95,12 +95,12 @@ FROM (
 ) numbers
 WHERE n < 288;
 
--- Bassin Quarantaine (turbidité moyenne 3.2 NTU)
-INSERT INTO turbidity_readings (probe_id, timestamp, turbidity)
+-- Bassin Quarantaine (TDS moyen 320 ppm)
+INSERT INTO tds_readings (probe_id, timestamp, tds)
 SELECT 
 	@probe3_id,
 	DATE_SUB(NOW(), INTERVAL (1440 - (n * 5)) MINUTE) as timestamp,
-	ROUND(3.2 + (RAND() - 0.5) * 1.0, 2) as turbidity
+	ROUND(320 + (RAND() - 0.5) * 50, 2) as tds
 FROM (
 	SELECT a.N + b.N * 10 + c.N * 100 as n
 	FROM 
@@ -115,4 +115,4 @@ SELECT 'Sondes créées' as Info, COUNT(*) as Count FROM probes
 UNION ALL
 SELECT 'Lectures de température' as Info, COUNT(*) as Count FROM temperature_readings
 UNION ALL
-SELECT 'Lectures de turbidité' as Info, COUNT(*) as Count FROM turbidity_readings;
+SELECT 'Lectures de TDS' as Info, COUNT(*) as Count FROM tds_readings;
