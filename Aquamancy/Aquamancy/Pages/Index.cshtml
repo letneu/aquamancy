@@ -126,12 +126,12 @@
     <div class="col-10">
         <div class="row">
             <div class="col-6">
-                <div class="card-body mb-8" style="position: relative;height: 65vh;">
+                <div class="card-body mb-8" style="position: relative;height: 65vh;background-color: rgba(13, 110, 253, 0.06);border-radius: 0.5rem;">
                     <canvas id="temperatureChart"></canvas>
                 </div>
             </div>
             <div class="col-6">
-                <div class="card-body mb-8" style="position: relative;height: 65vh;">
+                <div class="card-body mb-8" style="position: relative;height: 65vh;background-color: rgba(25, 135, 84, 0.06);border-radius: 0.5rem;">
                     <canvas id="tdsChart"></canvas>
                 </div>
             </div>
@@ -172,15 +172,15 @@
                 _ => "text-secondary"
             };
 
-        <div class="col-auto gx-2" style="min-width: 260px;">
-            <div class="card mb-3 text-center p-0 probe-card position-relative" style="max-width: 60rem; font-size: 2rem; cursor: pointer;"
+        <div class="col-auto gx-2" style="width: 220px;">
+            <div class="card mb-3 text-center p-0 probe-card position-relative" style="width: 100%; font-size: 2rem; cursor: pointer;"
                  data-probe-id="@tableInfo.Probe.Id" role="button" tabindex="0" title="Cliquez pour paramétrer la sonde">
                 <div class="probe-settings-overlay">
                     <i class="bi bi-gear-fill probe-settings-gear"></i>
                     <span class="probe-settings-text">Cliquez pour paramétrer la sonde</span>
                 </div>
-                <div data-toggle="tooltip" title="Dernier démarage : @(tableInfo.Probe.LastBootedAt.ToString())" class="card-header" style="background-color:@(tableInfo.Probe.Color);">
-                    @tableInfo.Probe.Name.ToUpper()
+                <div data-toggle="tooltip" title="Dernier démarage : @(tableInfo.Probe.LastBootedAt.ToString())" class="card-header" style="background-color:@(tableInfo.Probe.Color);overflow: hidden;">
+                    <span class="probe-name d-inline-block text-nowrap">@tableInfo.Probe.Name.ToUpper()</span>
                 </div>
                 <div class="card-body @(cardStyle) text-center" style="padding: 6px !important;">
                     @{
@@ -214,15 +214,15 @@
                         };
                     }
                     <div class="row mx-0">
-                        <div class="@(tableInfo.TdsReading != null ? "col-6" : "col-12") px-1">
+                        <div class="col-6 px-1">
                             <partial name="_ReadingDisplay" model="temperatureDisplay" />
                         </div>
-                        @if (tableInfo.TdsReading != null)
-                        {
-                            <div class="col-6 px-1 border-start">
+                        <div class="col-6 px-1 border-start">
+                            @if (tableInfo.TdsReading != null)
+                            {
                                 <partial name="_ReadingDisplay" model="tdsDisplay" />
-                            </div>
-                        }
+                            }
+                        </div>
                     </div>
                     <p style="font-size: 1.1rem;" class="card-text m-0 mt-1"><b style="color:@Model.coldColor">@($"{tableInfo.Probe.MinTemperature}°C")</b> - <b style="color:@Model.hotColor">@($"{tableInfo.Probe.MaxTemperature}°C")</b></p>
                     <p style="font-size: 0.9rem;" class="card-text m-0">
@@ -321,6 +321,31 @@
             }
             updateClock();
             setInterval(updateClock, 1000);
+
+            // Ajuste la taille de police du nom de sonde pour qu'il tienne dans le header
+            function fitProbeName(nameEl) {
+                var header = nameEl.parentElement;
+                if (!header) return;
+                var maxFontSize = 2; // rem
+                var minFontSize = 0.6; // rem
+                var step = 0.05;
+                var size = maxFontSize;
+                nameEl.style.fontSize = size + 'rem';
+                var available = header.clientWidth
+                    - parseFloat(getComputedStyle(header).paddingLeft)
+                    - parseFloat(getComputedStyle(header).paddingRight);
+                while (nameEl.scrollWidth > available && size > minFontSize) {
+                    size -= step;
+                    nameEl.style.fontSize = size + 'rem';
+                }
+            }
+
+            function fitAllProbeNames() {
+                document.querySelectorAll('.probe-name').forEach(fitProbeName);
+            }
+
+            fitAllProbeNames();
+            window.addEventListener('resize', fitAllProbeNames);
 
             // Probe settings modal
             (function () {

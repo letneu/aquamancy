@@ -2,4 +2,4 @@
 <p style="font-size: 0.75rem;" class="card-text m-0 text-muted">@Model.Label</p>
 <h5 style="font-size: 2.5rem;color:@Model.ValueColor" class="card-text fw-bold m-0">@(Model.Value.HasValue ? Model.Value.Value.ToString(Model.ValueFormat) : "N/A")
 </h5>
-<p style="font-size: 0.85rem;" class="card-text m-0">@(Model.Value.HasValue ? Model.Unit : " ")</p>
+<p style="font-size: 0.85rem;" class="card-text m-0">@(Model.Value.HasValue ? Model.Unit : "\u00A0")</p>
