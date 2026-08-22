@@ -86,3 +86,169 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
+
+/* Overlay de param\u00e9trage des sondes */
+.probe-settings-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 0.5rem;
+    background-color: rgba(33, 37, 41, 0.92);
+    color: #fff;
+    border-radius: inherit;
+}
+
+.probe-card:hover .probe-settings-overlay {
+    display: flex;
+}
+
+.probe-settings-gear {
+    font-size: 3rem;
+    animation: probe-gear-spin 4s linear infinite;
+}
+
+.probe-settings-text {
+    font-size: 1.1rem;
+}
+
+@keyframes probe-gear-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Modale de param\u00e9trage des sondes */
+#probeSettingsModal .modal-content {
+    background-color: #212529;
+    color: #dee2e6;
+    border: 1px solid #495057;
+}
+
+#probeSettingsModal .modal-header,
+#probeSettingsModal .modal-footer {
+    border-color: #495057;
+}
+
+#probeSettingsModal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+#probeSettingsModal .form-control {
+    background-color: #2b3035;
+    border-color: #495057;
+    color: #dee2e6;
+}
+
+#probeSettingsModal .form-control:focus {
+    background-color: #2b3035;
+    border-color: #86b7fe;
+    color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#probeSettingsModal .form-control:disabled,
+#probeSettingsModal .form-control[readonly] {
+    background-color: #1a1d20;
+    color: #adb5bd;
+}
+
+#probeSettingsModal .form-control-color {
+    background-color: #2b3035;
+}
+
+#probeSettingsModal .form-text {
+    color: #adb5bd;
+}
+
+#probeSettingsModal .form-range {
+    accent-color: #0d6efd;
+}
+
+/* Modale des paramètres de l'application : reprend le style sombre des sondes */
+#appSettingsModal .modal-content {
+    background-color: #212529;
+    color: #dee2e6;
+    border: 1px solid #495057;
+}
+
+#appSettingsModal .modal-header,
+#appSettingsModal .modal-footer {
+    border-color: #495057;
+}
+
+#appSettingsModal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+#appSettingsModal .form-control {
+    background-color: #2b3035;
+    border-color: #495057;
+    color: #dee2e6;
+}
+
+#appSettingsModal .form-control:focus {
+    background-color: #2b3035;
+    border-color: #86b7fe;
+    color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#appSettingsModal .form-control-color {
+    background-color: #2b3035;
+}
+
+#appSettingsModal .form-text {
+    color: #adb5bd;
+}
+
+#appSettingsModal h6 {
+    color: #dee2e6;
+    border-color: #495057 !important;
+}
+
+#appSettingsModal .form-range {
+    accent-color: #0d6efd;
+}
+
+/* Compacter la modale des paramètres pour tout afficher sans manquer d'espace vertical */
+#appSettingsModal .modal-body .mb-3 {
+    margin-bottom: 0.5rem !important;
+}
+
+#appSettingsModal .modal-body .alert {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+}
+
+#appSettingsModal .modal-body h6 {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Forcer le défilement du corps de la modale (les scrollbars sont masquées globalement) */
+#appSettingsModal .modal-body {
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #6c757d #2b3035;
+}
+
+#appSettingsModal .modal-body::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+    height: 8px;
+}
+
+#appSettingsModal .modal-body::-webkit-scrollbar-thumb {
+    background-color: #6c757d;
+    border-radius: 4px;
+}
+
+#appSettingsModal .modal-body::-webkit-scrollbar-track {
+    background-color: #2b3035;
+}

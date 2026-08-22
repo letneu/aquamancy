@@ -13,13 +13,10 @@ import os
 # Voir github.com/letneu/aquamancy/wiki
 
 # Codes d'erreur (nombre de clignotement de la led) :
-# 2 : Erreur de connexion à la sonde de température
 # 3 : Erreur de connexion au wifi
-# 4 : Erreur de lecture de la sonde de température
 # 5 : Erreur de communication avec le serveur
 # 6 : Erreur de récupération de l'ID unique de la machine
 # 7 : Erreur de lecture du fichier de configuration
-# 8 : Erreur de lecture de la sonde TDS
 
 
 print("Lancement de aquamancy")
@@ -32,6 +29,9 @@ TDS_PIN = 28
 VREF = 3.3
 ADC_RESOLUTION = 65535
 TDS_SAMPLES = 30
+TDS_MIN_VALID_PPM = 10
+# Ecart de tension (pull-up vs pull-down) au-dela duquel la broche est consideree flottante
+TDS_DETECT_DELTA_V = 2.0
 
 # --- Configuration des broches pour la led ---
 LED_PIN_R = 21
@@ -47,13 +47,10 @@ AP_IP = "192.168.4.1"
 
 # Messages correspondant aux codes d'erreur
 ERROR_MESSAGES = {
-    2: "Erreur de connexion à la sonde de température",
     3: "Erreur de connexion au wifi",
-    4: "Erreur de lecture de la sonde de température",
     5: "Erreur de communication avec le serveur",
     6: "Erreur de récupération de l'ID unique de la machine",
     7: "Erreur de lecture du fichier de configuration",
-    8: "Erreur de lecture de la sonde TDS",
 }
 
 # -------------------------
@@ -64,6 +61,22 @@ ERROR_MESSAGES = {
 def read_tds_voltage():
     raw = tds_adc.read_u16()
     return raw * VREF / ADC_RESOLUTION
+
+# Detection de la presence de la sonde TDS : une broche flottante suit les
+# resistances de tirage internes, alors que la sonde impose sa tension de sortie.
+def tds_probe_present():
+    global tds_adc
+    try:
+        Pin(TDS_PIN, Pin.IN, Pin.PULL_DOWN)
+        time.sleep_ms(5)
+        v_down = tds_adc.read_u16() * VREF / ADC_RESOLUTION
+        Pin(TDS_PIN, Pin.IN, Pin.PULL_UP)
+        time.sleep_ms(5)
+        v_up = tds_adc.read_u16() * VREF / ADC_RESOLUTION
+    finally:
+        # Retour en mode ADC pur (sans resistance de tirage)
+        tds_adc = ADC(Pin(TDS_PIN))
+    return (v_up - v_down) < TDS_DETECT_DELTA_V
 
 # Fonction de conversion tension -> TDS en ppm (formule DFRobot)
 def voltage_to_tds(voltage, temperature=25.0):
@@ -76,10 +89,17 @@ def voltage_to_tds(voltage, temperature=25.0):
 
 # Fonction de lecture du TDS (moyenne sur TDS_SAMPLES mesures)
 def read_tds_ppm(temperature=25.0):
+    if not tds_probe_present():
+        raise Exception("Sonde TDS absente (broche flottante)")
     samples = [read_tds_voltage() for _ in range(TDS_SAMPLES)]
     avg_voltage = sum(samples) / len(samples)
     tds_ppm = round(voltage_to_tds(avg_voltage, temperature))
     return tds_ppm, avg_voltage
+
+# Vérification de la validité d'une mesure TDS
+def validate_tds(tds_ppm):
+    if tds_ppm <= TDS_MIN_VALID_PPM:
+        raise Exception("TDS invalide : {:.0f} ppm".format(tds_ppm))
 
 # Fonction de récupération de l'ID unique de la machine
 def get_unique_id():
@@ -117,8 +137,6 @@ def temperature_probe_connect():
             raise Exception("Température invalide : {}".format(temp))
     except Exception as e:
         print("Erreur de connexion à la sonde de température :", e)
-        # Erreur de connexion à la sonde de température, code 2
-        error_blink(2, 60)
         return False
     return True
 
@@ -126,8 +144,7 @@ def temperature_probe_connect():
 def tds_probe_connect():
     try:
         tds_ppm, _ = read_tds_ppm()
-        if tds_ppm <= 0:
-            raise Exception("TDS invalide : {:.0f} ppm".format(tds_ppm))
+        validate_tds(tds_ppm)
     except Exception as e:
         print("Erreur de connexion à la sonde TDS :", e)
         return False
@@ -663,13 +680,13 @@ check_pairing_button()
 # Récupération de l'ID unique de la machine
 uid = get_unique_id()
 
-# Connexion à la sonde de température
-while not temperature_probe_connect():
-    time.sleep(1)
+# Connexion à la sonde de température (non bloquant : on continue même si elle ne répond pas)
+if not temperature_probe_connect():
+    print("Sonde de température indisponible, on continue sans elle")
 
-# Vérification de la sonde TDS
-while not tds_probe_connect():
-    time.sleep(1)
+# Vérification de la sonde TDS (non bloquant : on continue même si elle ne répond pas)
+if not tds_probe_connect():
+    print("Sonde TDS indisponible, on continue sans elle")
 
 # Connexion au Wi-Fi
 while not wifi_connect():
@@ -695,22 +712,21 @@ while True:
         print("Température :", temp, "°C")
         
     except Exception as e:
-        # Erreur de lecture de la sonde de température, code 4
-        handle_exception(e, 4)
-        continue
+        # Erreur de lecture de la sonde de température : on continue avec une valeur vide
+        print("Erreur de lecture de la sonde de température :", e)
+        temp = None
 
 
     # Lecture TDS (moyenne sur TDS_SAMPLES mesures)
     try:
-        tds_ppm, avg_voltage = read_tds_ppm(temp)
-        if tds_ppm <= 0:
-            raise Exception("TDS invalide : {:.0f} ppm".format(tds_ppm))
+        tds_ppm, avg_voltage = read_tds_ppm(temp if temp is not None else 25.0)
+        validate_tds(tds_ppm)
         print("TDS : {:.0f} ppm (tension : {:.3f} V)".format(tds_ppm, avg_voltage))
 
     except Exception as e:
-        # Erreur de lecture de la sonde TDS, code 8
-        handle_exception(e, 8)
-        continue
+        # Erreur de lecture de la sonde TDS : on continue avec une valeur vide
+        print("Erreur de lecture de la sonde TDS :", e)
+        tds_ppm = None
 
     try:
         # Vérifier la connexion WiFi avant l'envoi
@@ -724,8 +740,8 @@ while True:
         
         payload = {
             "MachineName": uid,
-            "Temperature": str(temp),
-            "Tds": str(round(tds_ppm, 2)),
+            "Temperature": str(temp) if temp is not None else "",
+            "Tds": str(round(tds_ppm, 2)) if tds_ppm is not None else "",
             "Rssi": rssi,
             "FirstLoop": first_loop
         }

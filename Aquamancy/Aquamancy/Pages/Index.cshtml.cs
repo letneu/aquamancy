@@ -7,9 +7,9 @@ using Aquamancy.IData;
 
 namespace Aquamancy.Pages
 {
-    public class IndexModel(IProbeRepository probeRepo, ITemperatureRepository tempRepo, ITdsRepository tdsRepo, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic) : PageModel
+    public class IndexModel(IProbeRepository probeRepo, ITemperatureRepository tempRepo, ITdsRepository tdsRepo, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic, IAppSettingsWriter appSettingsWriter) : PageModel
     {
-        public List<(Probe Probe, TemperatureReading? TemperatureReading, TdsReading? TdsReading)> TableInformations { get; set; } = [];
+        public List<(Probe Probe, TemperatureReading? TemperatureReading, TdsReading? TdsReading, bool HasTemperatureError, bool HasTdsError)> TableInformations { get; set; } = [];
 
         public ChartDto TemperatureChart { get; set; } = new ChartDto();
         public ChartDto TdsChart { get; set; } = new ChartDto();
@@ -18,6 +18,10 @@ namespace Aquamancy.Pages
         private readonly ITemperatureRepository _tempRepo = tempRepo;
         private readonly ITdsRepository _tdsRepo = tdsRepo;
         public readonly IErrorTriggerLogic ErrorTriggerLogic = errorTriggerLogic;
+        private readonly IAppSettingsWriter _appSettingsWriter = appSettingsWriter;
+
+        [BindProperty]
+        public AppSettingsDto AppSettings { get; set; } = new AppSettingsDto();
 
         private readonly int _displayLastHours = configuration.GetValue<int>("Chart:DisplayLastHours");
         public int _fontSizeMultiplier = configuration.GetValue<int>("Chart:FontSizeMultiplier");
@@ -29,6 +33,8 @@ namespace Aquamancy.Pages
 
         public async Task OnGetAsync()
         {
+            AppSettings = _appSettingsWriter.Read();
+
             TemperatureChart = new ChartDto();
             TdsChart = new ChartDto();
 
@@ -73,11 +79,23 @@ namespace Aquamancy.Pages
                 TdsChart.datasets.Add(tdsDataset);
 
                 // Only get the latest based on send frequency
-                var latestReading = temperatureReadings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120)).FirstOrDefault();
-                var latestTdsReading = tdsReadings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120)).FirstOrDefault();
+                var recentWindowStart = DateTime.Now.AddSeconds(-probe.SendFrequencyInSeconds - 120);
+                var latestReading = temperatureReadings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= recentWindowStart).FirstOrDefault();
+                var latestTdsReading = tdsReadings.OrderByDescending(r => r.Timestamp).Where(r => r.Timestamp >= recentWindowStart).FirstOrDefault();
 
-                TableInformations.Add((probe, latestReading, latestTdsReading));
+                // La sonde a communiqué récemment mais sans lecture correspondante => capteur en erreur
+                var hasRecentCommunication = probe.LastCommunicationDate.HasValue && probe.LastCommunicationDate.Value >= recentWindowStart;
+                var hasTemperatureError = hasRecentCommunication && latestReading is null;
+                var hasTdsError = probe.TdsEnabled && hasRecentCommunication && latestTdsReading is null;
+
+                TableInformations.Add((probe, latestReading, latestTdsReading, hasTemperatureError, hasTdsError));
             }
+        }
+
+        public IActionResult OnPostSaveSettings()
+        {
+            _appSettingsWriter.Write(AppSettings);
+            return RedirectToPage();
         }
 
         public async Task<IActionResult> OnGetProbeAsync(int id)
@@ -96,7 +114,8 @@ namespace Aquamancy.Pages
                 probe.Color,
                 probe.MinTemperature,
                 probe.MaxTemperature,
-                probe.SendFrequencyInSeconds
+                probe.SendFrequencyInSeconds,
+                probe.TdsEnabled
             });
         }
 
@@ -113,6 +132,7 @@ namespace Aquamancy.Pages
             probe.MinTemperature = Math.Round(ParseInvariantDouble(settings.MinTemperature, probe.MinTemperature));
             probe.MaxTemperature = Math.Round(ParseInvariantDouble(settings.MaxTemperature, probe.MaxTemperature));
             probe.SendFrequencyInSeconds = settings.SendFrequencyInSeconds;
+            probe.TdsEnabled = settings.TdsEnabled;
 
             await _probeRepo.UpdateSettingsAsync(probe);
 
@@ -147,6 +167,7 @@ namespace Aquamancy.Pages
             public string? MinTemperature { get; set; }
             public string? MaxTemperature { get; set; }
             public int SendFrequencyInSeconds { get; set; }
+            public bool TdsEnabled { get; set; }
         }
 
         private ChartDto.DatasetDto CreateDataset<T>(Probe probe, IEnumerable<(DateTime Timestamp, T Value, bool IsInRange)> readings)

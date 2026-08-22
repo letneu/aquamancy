@@ -26,12 +26,6 @@ namespace Aquamancy.Controllers
                     throw new BadHttpRequestException("Missing MachineName");
                 }
 
-                if (string.IsNullOrWhiteSpace(data.Temperature))
-                {
-                    throw new BadHttpRequestException("Missing Temperature");
-                }
-
-
                 //data = data with { Tds = null };
 
                 var (Success, ErrorMessage, Probe, ColorR, ColorG, ColorB) = await _readingLogic.Insert(data);

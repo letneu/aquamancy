@@ -52,13 +52,20 @@ namespace Aquamancy.Logic
                 probe.LastCommunicationDate = DateTime.Now;
             }
 
-            var tempResult = await _temperatureReadingLogic.Insert(postParams, probe);
-            if (!tempResult.Success)
+            // Temperature can be empty if the sensor has an issue: skip the insert, the UI will report the error
+            double? temperature = null;
+            if (!string.IsNullOrWhiteSpace(postParams.Temperature))
             {
-                return (false, tempResult.ErrorMessage, probe, 0, 0, 0);
+                var tempResult = await _temperatureReadingLogic.Insert(postParams, probe);
+                if (!tempResult.Success)
+                {
+                    return (false, tempResult.ErrorMessage, probe, 0, 0, 0);
+                }
+
+                temperature = tempResult.Temperature;
             }
 
-            // TDS is optional for now, only for testing
+            // TDS can also be empty if the sensor has an issue: skip the insert, the UI will report the error
             if (!string.IsNullOrWhiteSpace(postParams.Tds))
             {
                 var tdsResult = await _tdsReadingLogic.Insert(postParams, probe);
@@ -70,7 +77,10 @@ namespace Aquamancy.Logic
 
             // Determine the color based on the temperature relative to the probe's range
             // Too cold -> light blue, too hot -> orange, normal -> green
-            var (colorR, colorG, colorB) = GetColorForTemperature(tempResult.Temperature, probe);
+            // No temperature reading -> grey
+            var (colorR, colorG, colorB) = temperature.HasValue
+                ? GetColorForTemperature(temperature.Value, probe)
+                : (128, 128, 128);
 
             return (true, null, probe, colorR, colorG, colorB);
         }
