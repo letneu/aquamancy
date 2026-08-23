@@ -22,8 +22,6 @@ namespace Aquamancy.Services
                 DisplayLastHours = _configuration.GetValue<int>("Chart:DisplayLastHours"),
                 FontSizeMultiplier = _configuration.GetValue<int>("Chart:FontSizeMultiplier"),
                 RefreshIntervalInSeconds = _configuration.GetValue<int>("Chart:RefreshIntervalInSeconds"),
-                MinDisplayTemperature = _configuration.GetValue<int>("Chart:MinDisplayTemperature"),
-                MaxDisplayTemperature = _configuration.GetValue<int>("Chart:MaxDisplayTemperature"),
                 NotificationEnabled = _configuration.GetValue<bool>("Discord:NotificationEnabled"),
                 WebhookUrl = _configuration.GetValue<string>("Discord:WebhookUrl") ?? string.Empty,
                 AlertFrequencyInHours = _configuration.GetValue<int>("Discord:AlertFrequencyInHours"),
@@ -46,8 +44,6 @@ namespace Aquamancy.Services
                 json = ReplaceValue(json, "Chart", "DisplayLastHours", settings.DisplayLastHours.ToString(CultureInfo.InvariantCulture));
                 json = ReplaceValue(json, "Chart", "FontSizeMultiplier", settings.FontSizeMultiplier.ToString(CultureInfo.InvariantCulture));
                 json = ReplaceValue(json, "Chart", "RefreshIntervalInSeconds", settings.RefreshIntervalInSeconds.ToString(CultureInfo.InvariantCulture));
-                json = ReplaceValue(json, "Chart", "MinDisplayTemperature", settings.MinDisplayTemperature.ToString(CultureInfo.InvariantCulture));
-                json = ReplaceValue(json, "Chart", "MaxDisplayTemperature", settings.MaxDisplayTemperature.ToString(CultureInfo.InvariantCulture));
 
                 json = ReplaceValue(json, "Discord", "NotificationEnabled", settings.NotificationEnabled ? "true" : "false");
                 json = ReplaceValue(json, "Discord", "WebhookUrl", ToJsonString(settings.WebhookUrl));

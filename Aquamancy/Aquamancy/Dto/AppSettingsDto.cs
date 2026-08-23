@@ -6,8 +6,6 @@ namespace Aquamancy.Dto
         public int DisplayLastHours { get; set; }
         public int FontSizeMultiplier { get; set; }
         public int RefreshIntervalInSeconds { get; set; }
-        public int MinDisplayTemperature { get; set; }
-        public int MaxDisplayTemperature { get; set; }
 
         // Discord
         public bool NotificationEnabled { get; set; }

@@ -243,17 +243,7 @@
                             <div class="form-text mt-0 mb-1">Intervalle de rafraîchissement de la page du graphique en secondes</div>
                             <input type="number" min="5" class="form-control" asp-for="AppSettings.RefreshIntervalInSeconds" />
                         </div>
-                        <div class="col-xl-3 col-md-6 mb-3">
-                            <label asp-for="AppSettings.MinDisplayTemperature" class="form-label mb-0" style="color:@Model.coldColor;">Température min axe Y (°C)</label>
-                            <div class="form-text mt-0 mb-1">Température minimale sur l'axe Y du graphique</div>
-                            <input type="number" class="form-control" asp-for="AppSettings.MinDisplayTemperature" />
                         </div>
-                        <div class="col-xl-3 col-md-6 mb-3">
-                            <label asp-for="AppSettings.MaxDisplayTemperature" class="form-label mb-0" style="color:@Model.hotColor;">Température max axe Y (°C)</label>
-                            <div class="form-text mt-0 mb-1">Température maximale sur l'axe Y du graphique</div>
-                            <input type="number" class="form-control" asp-for="AppSettings.MaxDisplayTemperature" />
-                        </div>
-                    </div>
 
                     <h6 class="border-bottom pb-1">Discord</h6>
                     <div class="row">
