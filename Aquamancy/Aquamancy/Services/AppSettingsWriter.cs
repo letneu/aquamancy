@@ -19,7 +19,8 @@ namespace Aquamancy.Services
         {
             return new AppSettingsDto
             {
-                DisplayLastHours = _configuration.GetValue<int>("Chart:DisplayLastHours"),
+                DisplayLastHoursTemperature = _configuration.GetValue<int>("Chart:DisplayLastHoursTemperature"),
+                DisplayLastHoursTds = _configuration.GetValue<int>("Chart:DisplayLastHoursTds"),
                 FontSizeMultiplier = _configuration.GetValue<int>("Chart:FontSizeMultiplier"),
                 RefreshIntervalInSeconds = _configuration.GetValue<int>("Chart:RefreshIntervalInSeconds"),
                 NotificationEnabled = _configuration.GetValue<bool>("Discord:NotificationEnabled"),
@@ -41,7 +42,8 @@ namespace Aquamancy.Services
             {
                 var json = File.ReadAllText(_filePath);
 
-                json = ReplaceValue(json, "Chart", "DisplayLastHours", settings.DisplayLastHours.ToString(CultureInfo.InvariantCulture));
+                json = ReplaceValue(json, "Chart", "DisplayLastHoursTemperature", settings.DisplayLastHoursTemperature.ToString(CultureInfo.InvariantCulture));
+                json = ReplaceValue(json, "Chart", "DisplayLastHoursTds", settings.DisplayLastHoursTds.ToString(CultureInfo.InvariantCulture));
                 json = ReplaceValue(json, "Chart", "FontSizeMultiplier", settings.FontSizeMultiplier.ToString(CultureInfo.InvariantCulture));
                 json = ReplaceValue(json, "Chart", "RefreshIntervalInSeconds", settings.RefreshIntervalInSeconds.ToString(CultureInfo.InvariantCulture));
 

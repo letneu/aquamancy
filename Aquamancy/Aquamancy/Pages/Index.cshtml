@@ -229,9 +229,14 @@
                     <h6 class="border-bottom pb-1">Graphique</h6>
                     <div class="row">
                         <div class="col-xl-3 col-md-6 mb-3">
-                            <label asp-for="AppSettings.DisplayLastHours" class="form-label mb-0">Historique (heures)</label>
-                            <div class="form-text mt-0 mb-1">De combien d'heures en arrière les données du graphique démarrent-elles</div>
-                            <input type="number" min="1" class="form-control" asp-for="AppSettings.DisplayLastHours" />
+                            <label asp-for="AppSettings.DisplayLastHoursTemperature" class="form-label mb-0">Historique température (heures)</label>
+                            <div class="form-text mt-0 mb-1">De combien d'heures en arrière les données de température démarrent-elles</div>
+                            <input type="number" min="1" class="form-control" asp-for="AppSettings.DisplayLastHoursTemperature" />
+                        </div>
+                        <div class="col-xl-3 col-md-6 mb-3">
+                            <label asp-for="AppSettings.DisplayLastHoursTds" class="form-label mb-0">Historique TDS (heures)</label>
+                            <div class="form-text mt-0 mb-1">De combien d'heures en arrière les données de TDS démarrent-elles</div>
+                            <input type="number" min="1" class="form-control" asp-for="AppSettings.DisplayLastHoursTds" />
                         </div>
                         <div class="col-xl-3 col-md-6 mb-3">
                             <label asp-for="AppSettings.FontSizeMultiplier" class="form-label mb-0">Taille de police</label>

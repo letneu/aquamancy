@@ -218,10 +218,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         },
                         type: 'time',
                         time: {
-                            tooltipFormat: 'HH:mm',
-                            unit: 'hour',
+                            tooltipFormat: 'dd/MM HH:mm',
                             displayFormats: {
-                                hour: "HH'h'"
+                                hour: "HH'h'",
+                                day: "dd/MM",
+                                week: "dd/MM",
+                                month: "MM/yyyy"
                             }
                         },
                         title: {

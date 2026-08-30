@@ -23,7 +23,8 @@ namespace Aquamancy.Pages
         [BindProperty]
         public AppSettingsDto AppSettings { get; set; } = new AppSettingsDto();
 
-        private readonly int _displayLastHours = configuration.GetValue<int>("Chart:DisplayLastHours");
+        private readonly int _displayLastHoursTemperature = configuration.GetValue<int>("Chart:DisplayLastHoursTemperature");
+        private readonly int _displayLastHoursTds = configuration.GetValue<int>("Chart:DisplayLastHoursTds");
         public int _fontSizeMultiplier = configuration.GetValue<int>("Chart:FontSizeMultiplier");
         public int _pageRefreshIntervalInMiliSeconds = configuration.GetValue<int>("Chart:RefreshIntervalInSeconds") * 1000;
 
@@ -38,17 +39,20 @@ namespace Aquamancy.Pages
             TemperatureChart = new ChartDto();
             TdsChart = new ChartDto();
 
-            int n = _displayLastHours;
+            int nTemperature = _displayLastHoursTemperature;
+            int nTds = _displayLastHoursTds;
 
-            // Generate real hourly labels for the last 'n' hours
-            var startTime = DateTime.Now.AddHours(-n + 1);
+            // Generate real hourly labels for the last 'n' hours (temperature)
+            var startTimeTemperature = DateTime.Now.AddHours(-nTemperature + 1);
+            var startHourTemperature = new DateTime(startTimeTemperature.Year, startTimeTemperature.Month, startTimeTemperature.Day, startTimeTemperature.Hour, 0, 0);
+            var temperatureLabels = Enumerable.Range(0, nTemperature).Select(i => startHourTemperature.AddHours(i)).ToArray();
+            TemperatureChart.labels = [.. temperatureLabels];
 
-            // Align to the start of the hour
-            var startHour = new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, 0, 0);
-
-            var labels = Enumerable.Range(0, n).Select(i => startHour.AddHours(i)).ToArray();
-            TemperatureChart.labels = [.. labels];
-            TdsChart.labels = [.. labels];
+            // Generate real hourly labels for the last 'n' hours (TDS)
+            var startTimeTds = DateTime.Now.AddHours(-nTds + 1);
+            var startHourTds = new DateTime(startTimeTds.Year, startTimeTds.Month, startTimeTds.Day, startTimeTds.Hour, 0, 0);
+            var tdsLabels = Enumerable.Range(0, nTds).Select(i => startHourTds.AddHours(i)).ToArray();
+            TdsChart.labels = [.. tdsLabels];
 
             // Load probes from repository
             var probes = (await _probeRepo.GetAllAsync()).ToArray();
@@ -61,8 +65,8 @@ namespace Aquamancy.Pages
             foreach (var probe in probes)
             {
                 // Get recent readings for this probe
-                var temperatureReadings = (await _tempRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-n))).ToList();
-                var tdsReadings = (await _tdsRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-n))).ToList();
+                var temperatureReadings = (await _tempRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-nTemperature))).ToList();
+                var tdsReadings = (await _tdsRepo.GetForProbeAsync(probe.Id, DateTime.Now.AddHours(-nTds))).ToList();
 
                 // Create temperature dataset
                 var temperatureDataset = CreateDataset(

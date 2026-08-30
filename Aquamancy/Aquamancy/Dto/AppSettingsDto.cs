@@ -3,7 +3,8 @@ namespace Aquamancy.Dto
     public class AppSettingsDto
     {
         // Chart
-        public int DisplayLastHours { get; set; }
+        public int DisplayLastHoursTemperature { get; set; }
+        public int DisplayLastHoursTds { get; set; }
         public int FontSizeMultiplier { get; set; }
         public int RefreshIntervalInSeconds { get; set; }
 
