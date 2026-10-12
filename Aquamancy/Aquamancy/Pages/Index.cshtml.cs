@@ -76,9 +76,11 @@ namespace Aquamancy.Pages
                 TemperatureChart.datasets.Add(temperatureDataset);
 
                 // Create TDS dataset
+                // Le biais de correction s'applique uniquement à l'affichage du graphique,
+                // il ne modifie pas la vraie valeur TDS enregistrée en base de données.
                 var tdsDataset = CreateDataset(
                     probe,
-                    tdsReadings.Select(r => (r.Timestamp, r.Tds, IsInRange: true)) // Assuming TDS doesn't have min/max range yet
+                    tdsReadings.Select(r => (r.Timestamp, r.Tds + probe.TdsBias, IsInRange: true)) // Assuming TDS doesn't have min/max range yet
                 );
                 TdsChart.datasets.Add(tdsDataset);
 
@@ -119,7 +121,8 @@ namespace Aquamancy.Pages
                 probe.MinTemperature,
                 probe.MaxTemperature,
                 probe.SendFrequencyInSeconds,
-                probe.TdsEnabled
+                probe.TdsEnabled,
+                probe.TdsBias
             });
         }
 
@@ -137,6 +140,7 @@ namespace Aquamancy.Pages
             probe.MaxTemperature = Math.Round(ParseInvariantDouble(settings.MaxTemperature, probe.MaxTemperature));
             probe.SendFrequencyInSeconds = settings.SendFrequencyInSeconds;
             probe.TdsEnabled = settings.TdsEnabled;
+            probe.TdsBias = Math.Round(ParseInvariantDouble(settings.TdsBias, probe.TdsBias));
 
             await _probeRepo.UpdateSettingsAsync(probe);
 
@@ -172,6 +176,7 @@ namespace Aquamancy.Pages
             public string? MaxTemperature { get; set; }
             public int SendFrequencyInSeconds { get; set; }
             public bool TdsEnabled { get; set; }
+            public string? TdsBias { get; set; }
         }
 
         private ChartDto.DatasetDto CreateDataset<T>(Probe probe, IEnumerable<(DateTime Timestamp, T Value, bool IsInRange)> readings)

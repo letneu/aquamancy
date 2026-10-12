@@ -20,6 +20,7 @@ namespace Aquamancy.Models
         public double MaxTemperature { get; set; }
         public int SendFrequencyInSeconds { get; set; } = 60;
         public bool TdsEnabled { get; set; } = true;
+        public double TdsBias { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastNotifiedAt { get; set; }
         public DateTime? LastCommunicationDate { get; set; }

@@ -104,6 +104,20 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
+        // Le biais de correction n'a de sens que si le capteur TDS est activé.
+        function updateTdsBiasVisibility() {
+            var tdsEnabledEl = document.getElementById('probe-TdsEnabled');
+            var biasContainer = document.getElementById('probe-TdsBias-container');
+            if (!biasContainer) return;
+            var enabled = tdsEnabledEl && tdsEnabledEl.checked;
+            biasContainer.style.display = enabled ? '' : 'none';
+        }
+
+        (function () {
+            var tdsEnabledEl = document.getElementById('probe-TdsEnabled');
+            if (tdsEnabledEl) tdsEnabledEl.addEventListener('change', updateTdsBiasVisibility);
+        })();
+
         function openForProbe(probeId, statusMessage) {
             errorEl.classList.add('d-none');
             errorEl.textContent = '';
@@ -133,6 +147,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     setValue('probe-SendFrequencyInSeconds', p.sendFrequencyInSeconds);
                     var tdsEnabledEl = document.getElementById('probe-TdsEnabled');
                     if (tdsEnabledEl) tdsEnabledEl.checked = !!p.tdsEnabled;
+                    setValue('probe-TdsBias', p.tdsBias);
+                    updateTdsBiasVisibility();
                     syncSlidersFromNumbers();
                     modal.show();
                 })
