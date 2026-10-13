@@ -31,6 +31,7 @@ builder.Services.AddScoped<ITdsReadingLogic, TdsReadingLogic>();
 builder.Services.AddScoped<IReadingLogic, ReadingLogic>();
 builder.Services.AddSingleton<IErrorTriggerLogic, ErrorTriggerLogic>();
 builder.Services.AddSingleton<IAppSettingsWriter, AppSettingsWriter>();
+builder.Services.AddSingleton<IFirmwareLogic, FirmwareLogic>();
 
 builder.Services.AddHostedService<DiscordNotifierService>();
 builder.Services.AddHostedService<DeadManSwitchService>();

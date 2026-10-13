@@ -11,6 +11,8 @@ namespace Aquamancy.IData
         Task UpdateLastNotifiedAsync(int probeId, System.DateTime? when);
         Task UpdateCommunicationInfoAsync(int probeId, int rssi, System.DateTime lastCommunicationDate, DateTime? lastBootedAt, string? version);
         Task UpdateSettingsAsync(Probe probe);
+        Task UpdateTargetFirmwareVersionAsync(int probeId, string? targetFirmwareVersion);
+        Task UpdateTargetFirmwareVersionForAllAsync(string? targetFirmwareVersion);
         Task DeleteAsync(int probeId);
     }
 }

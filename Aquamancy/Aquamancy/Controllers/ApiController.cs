@@ -6,10 +6,11 @@ namespace Aquamancy.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ApiController(IReadingLogic readingLogic, IErrorTriggerLogic errorTriggerLogic) : ControllerBase
+    public class ApiController(IReadingLogic readingLogic, IErrorTriggerLogic errorTriggerLogic, IFirmwareLogic firmwareLogic) : ControllerBase
     {
         private readonly IReadingLogic _readingLogic = readingLogic;
         private readonly IErrorTriggerLogic _errorTriggerLogic = errorTriggerLogic;
+        private readonly IFirmwareLogic _firmwareLogic = firmwareLogic;
 
         [HttpPost("submit")]
         public async Task<IActionResult> Submit([FromBody] PostParams data)
@@ -30,12 +31,27 @@ namespace Aquamancy.Controllers
 
                 var (Success, ErrorMessage, Probe, ColorR, ColorG, ColorB) = await _readingLogic.Insert(data);
 
+                // Mise à jour proposée uniquement si la cible diffère de la version actuelle et existe sur disque
+                string? firmwareVersion = null;
+                string? firmwareSha256 = null;
+                if (!string.IsNullOrWhiteSpace(Probe.TargetFirmwareVersion)
+                    && !string.Equals(Probe.TargetFirmwareVersion, data.Version, StringComparison.OrdinalIgnoreCase))
+                {
+                    firmwareSha256 = _firmwareLogic.GetFirmwareSha256(Probe.TargetFirmwareVersion);
+                    if (firmwareSha256 is not null)
+                    {
+                        firmwareVersion = Probe.TargetFirmwareVersion;
+                    }
+                }
+
                 return Ok(new {  IsSuccess = Success,
                     ErrorMessage = ErrorMessage,
                     SendFrequencyInSeconds = Probe.SendFrequencyInSeconds,
                     ColorR = ColorR,
                     ColorG = ColorG,
-                    ColorB = ColorB });
+                    ColorB = ColorB,
+                    FirmwareVersion = firmwareVersion,
+                    FirmwareSha256 = firmwareSha256 });
             }
             catch (Exception ex)
             {
@@ -48,6 +64,18 @@ namespace Aquamancy.Controllers
 
                 return StatusCode(500, ex.Message);
             }
+        }
+
+        [HttpGet("firmware/{version}")]
+        public IActionResult Firmware(string version)
+        {
+            var path = _firmwareLogic.GetFirmwarePath(version);
+            if (path is null)
+            {
+                return NotFound();
+            }
+
+            return PhysicalFile(path, "application/octet-stream");
         }
     }
 }

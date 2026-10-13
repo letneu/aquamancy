@@ -170,28 +170,34 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
 }
 
 /* Modale des paramètres de l'application : reprend le style sombre des sondes */
-#appSettingsModal .modal-content {
+#appSettingsModal .modal-content,
+#firmwareModal .modal-content {
     background-color: #212529;
     color: #dee2e6;
     border: 1px solid #495057;
 }
 
 #appSettingsModal .modal-header,
-#appSettingsModal .modal-footer {
+#appSettingsModal .modal-footer,
+#firmwareModal .modal-header,
+#firmwareModal .modal-footer {
     border-color: #495057;
 }
 
-#appSettingsModal .btn-close {
+#appSettingsModal .btn-close,
+#firmwareModal .btn-close {
     filter: invert(1) grayscale(100%) brightness(200%);
 }
 
-#appSettingsModal .form-control {
+#appSettingsModal .form-control,
+#firmwareModal .form-control {
     background-color: #2b3035;
     border-color: #495057;
     color: #dee2e6;
 }
 
-#appSettingsModal .form-control:focus {
+#appSettingsModal .form-control:focus,
+#firmwareModal .form-control:focus {
     background-color: #2b3035;
     border-color: #86b7fe;
     color: #dee2e6;
@@ -202,7 +208,8 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
     background-color: #2b3035;
 }
 
-#appSettingsModal .form-text {
+#appSettingsModal .form-text,
+#firmwareModal .form-text {
     color: #adb5bd;
 }
 

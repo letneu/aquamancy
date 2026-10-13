@@ -7,9 +7,11 @@ using Aquamancy.IData;
 
 namespace Aquamancy.Pages
 {
-    public class IndexModel(IProbeRepository probeRepo, ITemperatureRepository tempRepo, ITdsRepository tdsRepo, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic, IAppSettingsWriter appSettingsWriter) : PageModel
+    public class IndexModel(IProbeRepository probeRepo, ITemperatureRepository tempRepo, ITdsRepository tdsRepo, IConfiguration configuration, IErrorTriggerLogic errorTriggerLogic, IAppSettingsWriter appSettingsWriter, IFirmwareLogic firmwareLogic) : PageModel
     {
         public List<(Probe Probe, TemperatureReading? TemperatureReading, TdsReading? TdsReading, bool HasTemperatureError, bool HasTdsError)> TableInformations { get; set; } = [];
+
+        public IReadOnlyList<string> AvailableFirmwareVersions { get; set; } = [];
 
         public ChartDto TemperatureChart { get; set; } = new ChartDto();
         public ChartDto TdsChart { get; set; } = new ChartDto();
@@ -19,6 +21,7 @@ namespace Aquamancy.Pages
         private readonly ITdsRepository _tdsRepo = tdsRepo;
         public readonly IErrorTriggerLogic ErrorTriggerLogic = errorTriggerLogic;
         private readonly IAppSettingsWriter _appSettingsWriter = appSettingsWriter;
+        private readonly IFirmwareLogic _firmwareLogic = firmwareLogic;
 
         [BindProperty]
         public AppSettingsDto AppSettings { get; set; } = new AppSettingsDto();
@@ -35,6 +38,7 @@ namespace Aquamancy.Pages
         public async Task OnGetAsync()
         {
             AppSettings = _appSettingsWriter.Read();
+            AvailableFirmwareVersions = _firmwareLogic.GetAvailableVersions();
 
             TemperatureChart = new ChartDto();
             TdsChart = new ChartDto();
@@ -104,6 +108,38 @@ namespace Aquamancy.Pages
             return RedirectToPage();
         }
 
+        [TempData]
+        public string? FirmwareMessage { get; set; }
+
+        [TempData]
+        public bool FirmwareSuccess { get; set; }
+
+        public async Task<IActionResult> OnPostUploadFirmwareAsync(IFormFile? firmwareFile)
+        {
+            if (firmwareFile is null || firmwareFile.Length == 0)
+            {
+                FirmwareSuccess = false;
+                FirmwareMessage = "Aucun fichier sélectionné.";
+                return RedirectToPage();
+            }
+
+            await using var stream = firmwareFile.OpenReadStream();
+            var (success, errorMessage, version) = await _firmwareLogic.SaveFirmwareAsync(stream);
+            if (!success)
+            {
+                FirmwareSuccess = false;
+                FirmwareMessage = errorMessage;
+                return RedirectToPage();
+            }
+
+            // Déploiement sur toutes les sondes, effectif à leur prochain envoi de mesures
+            await _probeRepo.UpdateTargetFirmwareVersionForAllAsync(version);
+
+            FirmwareSuccess = true;
+            FirmwareMessage = $"Firmware {version} enregistré, déploiement lancé sur toutes les sondes.";
+            return RedirectToPage();
+        }
+
         public async Task<IActionResult> OnGetProbeAsync(int id)
         {
             var probe = await _probeRepo.GetByIdAsync(id);
@@ -124,6 +160,7 @@ namespace Aquamancy.Pages
                 probe.TdsEnabled,
                 probe.TdsBias,
                 probe.Version,
+                probe.TargetFirmwareVersion,
                 probe.Rssi,
                 probe.RssiQualityLabel
             });
@@ -159,6 +196,17 @@ namespace Aquamancy.Pages
 
             await _probeRepo.UpdateSettingsAsync(probe);
 
+            var targetFirmwareVersion = string.IsNullOrWhiteSpace(settings.TargetFirmwareVersion) ? null : settings.TargetFirmwareVersion.Trim();
+            if (targetFirmwareVersion is not null && _firmwareLogic.GetFirmwarePath(targetFirmwareVersion) is null)
+            {
+                return BadRequest("Firmware introuvable.");
+            }
+
+            if (!string.Equals(targetFirmwareVersion, probe.TargetFirmwareVersion, StringComparison.Ordinal))
+            {
+                await _probeRepo.UpdateTargetFirmwareVersionAsync(probe.Id, targetFirmwareVersion);
+            }
+
             return new JsonResult(new { success = true });
         }
 
@@ -192,6 +240,7 @@ namespace Aquamancy.Pages
             public int SendFrequencyInSeconds { get; set; }
             public bool TdsEnabled { get; set; }
             public string? TdsBias { get; set; }
+            public string? TargetFirmwareVersion { get; set; }
         }
 
         private ChartDto.DatasetDto CreateDataset<T>(Probe probe, IEnumerable<(DateTime Timestamp, T Value, bool IsInRange)> readings)

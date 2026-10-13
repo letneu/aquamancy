@@ -55,6 +55,15 @@ namespace Aquamancy.Logic
                 probe.LastCommunicationDate = DateTime.Now;
             }
 
+            // La sonde signale qu'elle est revenue à la version précédente : on annule la cible pour ne pas boucler
+            if (!string.IsNullOrWhiteSpace(postParams.RolledBackFrom)
+                && string.Equals(postParams.RolledBackFrom, probe.TargetFirmwareVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                await _probeRepo.UpdateTargetFirmwareVersionAsync(probe.Id, null);
+                probe.TargetFirmwareVersion = null;
+                await _discordNotifierLogic.SendDiscordMessageAsync($"La sonde {probe.Name} n'a pas réussi à démarrer le firmware {postParams.RolledBackFrom}, retour à la version {postParams.Version}");
+            }
+
             // Temperature can be empty if the sensor has an issue: skip the insert, the UI will report the error
             double? temperature = null;
             if (!string.IsNullOrWhiteSpace(postParams.Temperature))

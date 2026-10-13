@@ -21,6 +21,11 @@
                 <i class="bi bi-gear-fill"></i> Paramètres de l'application
             </button>
         </div>
+        <div class="text-center mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#firmwareModal">
+                <i class="bi bi-cpu-fill"></i> Firmware des sondes
+            </button>
+        </div>
         @if(Model.ErrorTriggerLogic.HasError)
         {
             <div class="alert alert-danger" role="alert">
@@ -330,6 +335,39 @@
     </div>
 </div>
 
+<div class="modal fade" id="firmwareModal" tabindex="-1" aria-labelledby="firmwareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data" asp-page-handler="UploadFirmware">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="firmwareModalLabel">Firmware des sondes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(Model.FirmwareMessage))
+                    {
+                        <div class="alert @(Model.FirmwareSuccess ? "alert-success" : "alert-danger")" role="alert" id="firmwareMessage">@Model.FirmwareMessage</div>
+                    }
+                    <div class="mb-3">
+                        <label for="firmwareFile" class="form-label mb-0">Nouvelle version</label>
+                        <div class="form-text mt-0 mb-1">Fichier main.py de la sonde. La version est lue dans la ligne VERSION du fichier. Toutes les sondes se mettront à jour à leur prochain envoi (retour automatique à la version précédente en cas d'échec).</div>
+                        <input type="file" class="form-control" id="firmwareFile" name="firmwareFile" accept=".py" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label mb-0">Versions disponibles</label>
+                        <div class="form-text mt-0 mb-1">Firmwares présents sur le serveur</div>
+                        <div>@(Model.AvailableFirmwareVersions.Count > 0 ? string.Join(", ", Model.AvailableFirmwareVersions) : "Aucune")</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">Envoyer et déployer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="probeSettingsModal" tabindex="-1" aria-labelledby="probeSettingsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -358,6 +396,17 @@
                             <label for="probe-Version" class="form-label mb-0">Version</label>
                             <div class="form-text mt-0 mb-1">Version du firmware de la sonde</div>
                             <input type="text" class="form-control" id="probe-Version" readonly disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-TargetFirmwareVersion" class="form-label mb-0">Mise à jour du firmware</label>
+                            <div class="form-text mt-0 mb-1">Version à installer à distance (retour automatique à la version précédente en cas d'échec)</div>
+                            <select class="form-select" name="TargetFirmwareVersion" id="probe-TargetFirmwareVersion">
+                                <option value="">Aucune</option>
+                                @foreach (var firmwareVersion in Model.AvailableFirmwareVersions)
+                                {
+                                    <option value="@firmwareVersion">@firmwareVersion</option>
+                                }
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="probe-Wifi" class="form-label mb-0">Qualité wifi</label>
@@ -433,4 +482,12 @@
             tdsChart: @(Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TdsChart)))
         };
     </script>
+    @if (!string.IsNullOrWhiteSpace(Model.FirmwareMessage))
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('firmwareModal')).show();
+            });
+        </script>
+    }
 }

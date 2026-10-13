@@ -50,6 +50,12 @@ document.addEventListener('DOMContentLoaded', function () {
         window.appSettingsModalOpen = false;
         appModalEl.addEventListener('shown.bs.modal', function () { window.appSettingsModalOpen = true; });
         appModalEl.addEventListener('hidden.bs.modal', function () { window.appSettingsModalOpen = false; });
+
+        var firmwareModalEl = document.getElementById('firmwareModal');
+        if (!firmwareModalEl) return;
+        window.firmwareModalOpen = false;
+        firmwareModalEl.addEventListener('shown.bs.modal', function () { window.firmwareModalOpen = true; });
+        firmwareModalEl.addEventListener('hidden.bs.modal', function () { window.firmwareModalOpen = false; });
     })();
 
     // Probe settings modal
@@ -142,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     setValue('probe-Name', p.name);
                     setValue('probe-MachineName', p.machineName);
                     setValue('probe-Version', p.version || 'Inconnue');
+                    setValue('probe-TargetFirmwareVersion', p.targetFirmwareVersion || '');
                     setValue('probe-Wifi', p.rssi ? (p.rssiQualityLabel + ' (' + p.rssi + ' dBm)') : 'Inconnue');
                     setValue('probe-Color', p.color || '#007bff');
                     setValue('probe-MinTemperature', p.minTemperature);
@@ -357,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateRefreshProgress() {
         if (!progressBar) return;
         // Pause le compteur tant que la modale de paramétrage est ouverte
-        if (window.probeModalOpen || window.appSettingsModalOpen) {
+        if (window.probeModalOpen || window.appSettingsModalOpen || window.firmwareModalOpen) {
             refreshStart = Date.now() - lastElapsed;
             return;
         }

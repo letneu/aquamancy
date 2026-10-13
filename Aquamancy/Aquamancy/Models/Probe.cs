@@ -27,6 +27,7 @@ namespace Aquamancy.Models
         public DateTime? LastBootedAt { get; set; }
         public int Rssi { get; set; }
         public string? Version { get; set; }
+        public string? TargetFirmwareVersion { get; set; }
 
         public int ColorR => ConvertHexToRgbComponent(Color, 0);
         public int ColorG => ConvertHexToRgbComponent(Color, 1);

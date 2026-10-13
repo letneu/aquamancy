@@ -10,6 +10,8 @@ import time
 import onewire
 import json
 import os
+import hashlib
+import binascii
 # Voir github.com/letneu/aquamancy/wiki
 
 # Codes d'erreur (nombre de clignotement de la led) :
@@ -20,7 +22,7 @@ import os
 
 
 # Version du firmware, envoyée au serveur à chaque communication
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 print("Lancement de aquamancy", VERSION)
 
@@ -155,7 +157,7 @@ def tds_probe_connect():
 
 # Fonction de connexion au réseau Wi-Fi
 def wifi_connect():
-    global wlan, server_url
+    global wlan, server_url, server_base_url
     try:
         # Creation du fichier de config si n'existe pas
         if "config.json" not in os.listdir():
@@ -279,6 +281,197 @@ def error_blink(blink_count, duration):
             led_turn_off()
             sleep_with_pairing_check(blink_duration)
         sleep_with_pairing_check(pause_duration)
+
+# -------------------------
+# MISE A JOUR A DISTANCE (OTA)
+# Le chargeur boot.py lance /app/<version>/main.py et revient a la version
+# precedente si la nouvelle n'est pas validee apres plusieurs demarrages.
+# -------------------------
+
+OTA_STATE_FILE = "ota.json"
+OTA_STATE_TMP_FILE = "ota.tmp"
+OTA_APP_DIR = "/app"
+# Delai pour joindre le serveur avec une nouvelle version avant de redemarrer (et compter un echec)
+OTA_VALIDATION_TIMEOUT_MS = 10 * 60 * 1000
+
+
+def ota_app_path(version):
+    return "{}/{}/main.py".format(OTA_APP_DIR, version)
+
+
+def ota_file_exists(path):
+    try:
+        os.stat(path)
+        return True
+    except OSError:
+        return False
+
+
+def ota_mkdir(path):
+    try:
+        os.mkdir(path)
+    except OSError:
+        pass
+
+
+def ota_load_state():
+    try:
+        with open(OTA_STATE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+# Ecriture dans un fichier temporaire puis renommage pour eviter un fichier corrompu en cas de coupure
+def ota_save_state(state):
+    with open(OTA_STATE_TMP_FILE, "w") as f:
+        json.dump(state, f)
+    os.rename(OTA_STATE_TMP_FILE, OTA_STATE_FILE)
+
+
+def ota_is_pending():
+    return ota_state is not None and bool(ota_state.get("pending")) and ota_state.get("current") == VERSION
+
+
+def ota_rolled_back_from():
+    return ota_state.get("rolled_back_from") if ota_state is not None else None
+
+
+# Redemarre si la nouvelle version n'a pas joint le serveur a temps
+def ota_guard_callback(timer):
+    if ota_is_pending() and time.ticks_diff(time.ticks_ms(), ota_boot_ms) > OTA_VALIDATION_TIMEOUT_MS:
+        print("OTA - version non validee dans le delai imparti, redemarrage")
+        machine.reset()
+
+
+def ota_start_guard():
+    global ota_guard_timer
+    if ota_is_pending():
+        print("OTA - version", VERSION, "en attente de validation")
+        ota_guard_timer = machine.Timer(mode=machine.Timer.PERIODIC, period=5000, callback=ota_guard_callback)
+
+
+def ota_stop_guard():
+    global ota_guard_timer
+    if ota_guard_timer is not None:
+        ota_guard_timer.deinit()
+        ota_guard_timer = None
+
+
+# Suppression des anciennes versions (on garde l'actuelle et la precedente)
+def ota_cleanup():
+    keep = (ota_state.get("current"), ota_state.get("previous"))
+    try:
+        for name in os.listdir(OTA_APP_DIR):
+            if name in keep:
+                continue
+            directory = "{}/{}".format(OTA_APP_DIR, name)
+            for file_name in os.listdir(directory):
+                os.remove("{}/{}".format(directory, file_name))
+            os.rmdir(directory)
+            print("OTA - ancienne version supprimee :", name)
+    except Exception as e:
+        print("OTA - erreur de nettoyage :", e)
+
+
+# Appelee apres une communication reussie avec le serveur : la version courante est validee
+def ota_validate():
+    if ota_state is None:
+        return
+
+    changed = False
+    if ota_is_pending():
+        print("OTA - version", VERSION, "validee")
+        ota_state["pending"] = False
+        ota_state["attempts"] = 0
+        ota_stop_guard()
+        ota_cleanup()
+        changed = True
+
+    # Le serveur a ete informe du retour arriere
+    if ota_state.get("rolled_back_from"):
+        ota_state["rolled_back_from"] = None
+        changed = True
+
+    if changed:
+        ota_save_state(ota_state)
+
+
+# Telechargement, verification et activation d'une nouvelle version, puis redemarrage
+def ota_install(version, sha256):
+    print("OTA - installation de la version", version)
+    target_dir = "{}/{}".format(OTA_APP_DIR, version)
+    tmp_path = target_dir + "/main.tmp"
+    ota_mkdir(OTA_APP_DIR)
+    ota_mkdir(target_dir)
+
+    # Telechargement par morceaux pour ne pas saturer la RAM
+    url = "{}/api/firmware/{}".format(server_base_url, version)
+    h = hashlib.sha256()
+    r = urequests.get(url, timeout=30)
+    try:
+        if r.status_code != 200:
+            raise Exception("Code HTTP {}".format(r.status_code))
+        with open(tmp_path, "wb") as f:
+            while True:
+                chunk = r.raw.read(1024)
+                if not chunk:
+                    break
+                h.update(chunk)
+                f.write(chunk)
+    finally:
+        r.close()
+
+    digest = binascii.hexlify(h.digest()).decode()
+    if digest != sha256.lower():
+        os.remove(tmp_path)
+        raise Exception("SHA-256 invalide ({} au lieu de {})".format(digest, sha256))
+
+    final_path = ota_app_path(version)
+    if ota_file_exists(final_path):
+        os.remove(final_path)
+    os.rename(tmp_path, final_path)
+
+    # Conservation de la version actuelle pour pouvoir y revenir (cas du main.py racine flashe en USB)
+    current_path = ota_app_path(VERSION)
+    if not ota_file_exists(current_path):
+        ota_mkdir("{}/{}".format(OTA_APP_DIR, VERSION))
+        with open("/main.py", "rb") as src, open(current_path, "wb") as dst:
+            while True:
+                chunk = src.read(1024)
+                if not chunk:
+                    break
+                dst.write(chunk)
+
+    ota_save_state({
+        "current": version,
+        "previous": VERSION,
+        "pending": True,
+        "attempts": 0,
+        "rolled_back_from": None
+    })
+
+    print("OTA - version", version, "installee, redemarrage")
+    time.sleep(1)
+    machine.reset()
+
+
+# Verifie si le serveur propose une nouvelle version
+def ota_check_update(response_data):
+    version = response_data.get("firmwareVersion")
+    sha256 = response_data.get("firmwareSha256")
+    if not version or not sha256 or version == VERSION:
+        return
+    # Pas de mise a jour tant que la version courante n'est pas validee
+    if ota_is_pending():
+        return
+    # Version deja installee mais ce main.py a ete lance directement (Thonny) sans passer par boot.py
+    if ota_state is not None and ota_state.get("current") == version:
+        return
+    try:
+        ota_install(version, sha256)
+    except Exception as e:
+        print("OTA - echec de l'installation :", e)
 
 # -------------------------
 # MODE APPAIRAGE (portail captif)
@@ -539,6 +732,9 @@ def handle_http(conn):
 def pairing_mode():
     print("Appairage - demarrage du mode appairage")
 
+    # Pas de redemarrage automatique pendant que l'utilisateur configure la sonde
+    ota_stop_guard()
+
     start_ap()
 
     dns_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -664,6 +860,13 @@ current_led_color = DEFAULT_LED_COLOR
 # Fréquence d'envoi par défaut (en secondes)
 sendFrequencyInSeconds = 60
 
+# Variables globales pour la mise à jour à distance
+server_base_url = None
+ota_state = ota_load_state()
+ota_boot_ms = time.ticks_ms()
+ota_guard_timer = None
+ota_start_guard()
+
 # Initialisation de la sonde TDS
 tds_adc = ADC(Pin(TDS_PIN))
 
@@ -747,7 +950,8 @@ while True:
             "Tds": str(round(tds_ppm, 2)) if tds_ppm is not None else "",
             "Rssi": rssi,
             "FirstLoop": first_loop,
-            "Version": VERSION
+            "Version": VERSION,
+            "RolledBackFrom": ota_rolled_back_from()
         }
 
         r = None
@@ -762,6 +966,10 @@ while True:
 
         if not isinstance(responseData, dict):
             raise Exception("Réponse serveur invalide")
+
+        # Le serveur a répondu : la version courante est validée, puis recherche de mise à jour
+        ota_validate()
+        ota_check_update(responseData)
 
         current_led_color = get_response_led_color(responseData)
         print("Couleur serveur :", current_led_color)

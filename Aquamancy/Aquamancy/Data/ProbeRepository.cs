@@ -59,6 +59,13 @@ namespace Aquamancy.Data
 
             await addVersionCmd.ExecuteNonQueryAsync();
 
+            // Add the target_firmware_version column to existing databases
+            await using var addTargetFirmwareCmd = conn.CreateCommand();
+            addTargetFirmwareCmd.CommandText = @"ALTER TABLE probes
+                ADD COLUMN IF NOT EXISTS target_firmware_version VARCHAR(50) DEFAULT NULL;";
+
+            await addTargetFirmwareCmd.ExecuteNonQueryAsync();
+
             // Remove legacy tendency columns from existing databases
             await using var dropCmd = conn.CreateCommand();
             dropCmd.CommandText = @"ALTER TABLE probes
@@ -101,7 +108,7 @@ namespace Aquamancy.Data
             await conn.OpenAsync();
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, created_at, last_notified_at, last_communication_date, last_booted_at, rssi, tds_enabled, tds_bias, version FROM probes WHERE id = @id LIMIT 1";
+            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, created_at, last_notified_at, last_communication_date, last_booted_at, rssi, tds_enabled, tds_bias, version, target_firmware_version FROM probes WHERE id = @id LIMIT 1";
             var p = cmd.CreateParameter(); p.ParameterName = "@id"; p.Value = id; cmd.Parameters.Add(p);
 
             await using var rdr = await cmd.ExecuteReaderAsync();
@@ -123,7 +130,8 @@ namespace Aquamancy.Data
                     Rssi = rdr.IsDBNull(11) ? 0 : rdr.GetInt32(11),
                     TdsEnabled = rdr.IsDBNull(12) || rdr.GetBoolean(12),
                     TdsBias = rdr.IsDBNull(13) ? 0 : rdr.GetDouble(13),
-                    Version = rdr.IsDBNull(14) ? null : rdr.GetString(14)
+                    Version = rdr.IsDBNull(14) ? null : rdr.GetString(14),
+                    TargetFirmwareVersion = rdr.IsDBNull(15) ? null : rdr.GetString(15)
                 };
             }
 
@@ -138,7 +146,7 @@ namespace Aquamancy.Data
             await conn.OpenAsync();
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, created_at, last_notified_at, last_communication_date, last_booted_at, rssi, tds_enabled, tds_bias, version FROM probes ORDER BY id";
+            cmd.CommandText = "SELECT id, name, machine_name, color, min_temperature, max_temperature, send_frequency_in_seconds, created_at, last_notified_at, last_communication_date, last_booted_at, rssi, tds_enabled, tds_bias, version, target_firmware_version FROM probes ORDER BY id";
 
             await using var rdr = await cmd.ExecuteReaderAsync();
             while (await rdr.ReadAsync())
@@ -159,7 +167,8 @@ namespace Aquamancy.Data
                     Rssi = rdr.IsDBNull(11) ? 0 : rdr.GetInt32(11),
                     TdsEnabled = rdr.IsDBNull(12) || rdr.GetBoolean(12),
                     TdsBias = rdr.IsDBNull(13) ? 0 : rdr.GetDouble(13),
-                    Version = rdr.IsDBNull(14) ? null : rdr.GetString(14)
+                    Version = rdr.IsDBNull(14) ? null : rdr.GetString(14),
+                    TargetFirmwareVersion = rdr.IsDBNull(15) ? null : rdr.GetString(15)
                 });
             }
 
@@ -201,6 +210,31 @@ namespace Aquamancy.Data
             {
                 var p5 = cmd.CreateParameter(); p5.ParameterName = "@version"; p5.Value = version; cmd.Parameters.Add(p5);
             }
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task UpdateTargetFirmwareVersionAsync(int probeId, string? targetFirmwareVersion)
+        {
+            await using var conn = _factory.CreateConnection();
+            await conn.OpenAsync();
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE probes SET target_firmware_version = @target WHERE id = @id";
+            var p1 = cmd.CreateParameter(); p1.ParameterName = "@target"; p1.Value = string.IsNullOrWhiteSpace(targetFirmwareVersion) ? System.DBNull.Value : (object)targetFirmwareVersion; cmd.Parameters.Add(p1);
+            var p2 = cmd.CreateParameter(); p2.ParameterName = "@id"; p2.Value = probeId; cmd.Parameters.Add(p2);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        public async Task UpdateTargetFirmwareVersionForAllAsync(string? targetFirmwareVersion)
+        {
+            await using var conn = _factory.CreateConnection();
+            await conn.OpenAsync();
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE probes SET target_firmware_version = @target";
+            var p1 = cmd.CreateParameter(); p1.ParameterName = "@target"; p1.Value = string.IsNullOrWhiteSpace(targetFirmwareVersion) ? System.DBNull.Value : (object)targetFirmwareVersion; cmd.Parameters.Add(p1);
 
             await cmd.ExecuteNonQueryAsync();
         }
