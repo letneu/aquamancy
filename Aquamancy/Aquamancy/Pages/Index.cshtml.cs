@@ -122,8 +122,23 @@ namespace Aquamancy.Pages
                 probe.MaxTemperature,
                 probe.SendFrequencyInSeconds,
                 probe.TdsEnabled,
-                probe.TdsBias
+                probe.TdsBias,
+                probe.Version,
+                probe.Rssi,
+                probe.RssiQualityLabel
             });
+        }
+
+        public async Task<IActionResult> OnPostDeleteProbeAsync([FromForm] int id)
+        {
+            var probe = await _probeRepo.GetByIdAsync(id);
+            if (probe == null)
+            {
+                return NotFound();
+            }
+
+            await _probeRepo.DeleteAsync(id);
+            return new JsonResult(new { success = true });
         }
 
         public async Task<IActionResult> OnPostUpdateProbeAsync([FromForm] ProbeSettingsDto settings)

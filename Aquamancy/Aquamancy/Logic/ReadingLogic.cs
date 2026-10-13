@@ -34,6 +34,7 @@ namespace Aquamancy.Logic
                     MaxTemperature = 0,
                     CreatedAt = DateTime.Now,
                     Rssi = postParams.Rssi,
+                    Version = postParams.Version,
                     LastCommunicationDate = DateTime.Now
                 };
 
@@ -47,8 +48,10 @@ namespace Aquamancy.Logic
             else
             {
                 // Update RSSI and LastCommunicationDate for existing probe
-                await _probeRepo.UpdateCommunicationInfoAsync(probe.Id, postParams.Rssi, DateTime.Now, postParams.FirstLoop ? DateTime.Now : null);
+                await _probeRepo.UpdateCommunicationInfoAsync(probe.Id, postParams.Rssi, DateTime.Now, postParams.FirstLoop ? DateTime.Now : null, postParams.Version);
                 probe.Rssi = postParams.Rssi;
+                if (!string.IsNullOrWhiteSpace(postParams.Version))
+                    probe.Version = postParams.Version;
                 probe.LastCommunicationDate = DateTime.Now;
             }
 

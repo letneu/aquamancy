@@ -355,6 +355,16 @@
                             <input type="text" class="form-control" id="probe-MachineName" readonly disabled />
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label for="probe-Version" class="form-label mb-0">Version</label>
+                            <div class="form-text mt-0 mb-1">Version du firmware de la sonde</div>
+                            <input type="text" class="form-control" id="probe-Version" readonly disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="probe-Wifi" class="form-label mb-0">Qualité wifi</label>
+                            <div class="form-text mt-0 mb-1">Puissance du signal lors de la dernière communication</div>
+                            <input type="text" class="form-control" id="probe-Wifi" readonly disabled />
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label for="probe-MinTemperature" class="form-label mb-0" style="color:@Model.coldColor;">Température min (°C)</label>
                             <div class="form-text mt-0 mb-1">Seuil minimum avant alerte</div>
                             <div class="d-flex align-items-center gap-2">
@@ -402,6 +412,7 @@
                         </div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-danger me-auto" id="probeDeleteButton"><i class="bi bi-trash"></i> Supprimer</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-primary">Enregistrer</button>
                 </div>

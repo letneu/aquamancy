@@ -19,7 +19,10 @@ import os
 # 7 : Erreur de lecture du fichier de configuration
 
 
-print("Lancement de aquamancy")
+# Version du firmware, envoyée au serveur à chaque communication
+VERSION = "1.0.0"
+
+print("Lancement de aquamancy", VERSION)
 
 # Sur les anciens modèles c'est 28 et 27 pour les nouveaux
 TEMPERATURE_DATA_PIN = 17
@@ -743,7 +746,8 @@ while True:
             "Temperature": str(temp) if temp is not None else "",
             "Tds": str(round(tds_ppm, 2)) if tds_ppm is not None else "",
             "Rssi": rssi,
-            "FirstLoop": first_loop
+            "FirstLoop": first_loop,
+            "Version": VERSION
         }
 
         r = None

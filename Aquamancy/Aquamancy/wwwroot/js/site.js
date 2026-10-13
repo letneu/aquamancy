@@ -141,6 +141,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     setValue('probe-Id', p.id);
                     setValue('probe-Name', p.name);
                     setValue('probe-MachineName', p.machineName);
+                    setValue('probe-Version', p.version || 'Inconnue');
+                    setValue('probe-Wifi', p.rssi ? (p.rssiQualityLabel + ' (' + p.rssi + ' dBm)') : 'Inconnue');
                     setValue('probe-Color', p.color || '#007bff');
                     setValue('probe-MinTemperature', p.minTemperature);
                     setValue('probe-MaxTemperature', p.maxTemperature);
@@ -166,6 +168,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
             });
         });
+
+        var deleteBtn = document.getElementById('probeDeleteButton');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function () {
+                var idEl = document.getElementById('probe-Id');
+                var nameEl = document.getElementById('probe-Name');
+                if (!idEl || !idEl.value) return;
+                var name = nameEl ? nameEl.value : '';
+                if (!confirm('Supprimer définitivement la sonde "' + name + '" et tout son historique ?')) return;
+                errorEl.classList.add('d-none');
+                var formData = new FormData();
+                formData.append('id', idEl.value);
+                var token = form.querySelector('input[name="__RequestVerificationToken"]');
+                fetch('?handler=DeleteProbe', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': token ? token.value : '' },
+                    body: formData
+                })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('Échec de la suppression.');
+                        modal.hide();
+                        window.location.reload();
+                    })
+                    .catch(function (err) {
+                        errorEl.textContent = err.message;
+                        errorEl.classList.remove('d-none');
+                    });
+            });
+        }
 
         form.addEventListener('submit', function (e) {
             e.preventDefault();
